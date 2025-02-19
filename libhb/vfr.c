@@ -1,6 +1,6 @@
 /* vfr.c
 
-   Copyright (c) 2003-2024 HandBrake Team
+   Copyright (c) 2003-2025 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -337,7 +337,7 @@ static hb_buffer_t * adjust_frame_rate( hb_filter_private_t * pv,
         for (; excess >= pv->frame_duration; excess -= pv->frame_duration)
         {
             /* next frame too far ahead - dup current frame */
-            hb_buffer_t *dup = hb_buffer_dup( out );
+            hb_buffer_t *dup = hb_buffer_shallow_dup( out );
             dup->s.new_chap = 0;
             dup->s.start = cfr_stop;
             cfr_stop += pv->frame_duration;

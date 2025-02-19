@@ -1,6 +1,6 @@
 /* deinterlace_vt.m
 
-   Copyright (c) 2003-2024 HandBrake Team
+   Copyright (c) 2003-2025 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -11,6 +11,7 @@
 #include "handbrake/decomb.h"
 #include "cv_utils.h"
 #include "metal_utils.h"
+#include "vt_common.h"
 
 extern char hb_yadif_vt_metallib_data[];
 extern unsigned int hb_yadif_vt_metallib_len;
@@ -266,16 +267,16 @@ static hb_buffer_t * filter_frame(hb_filter_private_t *pv, int parity, int tff)
         }
 
         int channels;
-        const MTLPixelFormat format = hb_metal_pix_fmt_from_component(comp, &channels);
+        const MTLPixelFormat format = hb_metal_pix_fmt_from_component(comp, 0, &channels);
         if (format == MTLPixelFormatInvalid)
         {
             goto fail;
         }
 
-        CVMetalTextureRef prev = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_prev, i, format);
-        CVMetalTextureRef cur  = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_cur,  i, format);
-        CVMetalTextureRef next = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_next, i, format);
-        CVMetalTextureRef dest = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_dest, i, format);
+        CVMetalTextureRef prev = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_prev, i, channels, format);
+        CVMetalTextureRef cur  = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_cur,  i, channels, format);
+        CVMetalTextureRef next = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_next, i, channels, format);
+        CVMetalTextureRef dest = hb_metal_create_texture_from_pixbuf(pv->mtl->cache, cv_dest, i, channels, format);
 
         id<MTLTexture> tex_prev = CVMetalTextureGetTexture(prev);
         id<MTLTexture> tex_cur  = CVMetalTextureGetTexture(cur);
@@ -290,7 +291,9 @@ static hb_buffer_t * filter_frame(hb_filter_private_t *pv, int parity, int tff)
         CFRelease(dest);
     }
 
+#if defined(HB_VT_PROPAGATE_ATTACHMENTS)
     CVBufferPropagateAttachments(cv_cur, cv_dest);
+#endif
 
     out = hb_buffer_wrapper_init();
     out->storage_type      = COREMEDIA;
@@ -325,7 +328,7 @@ static void process_frame(hb_filter_private_t *pv)
          pv->ref[CURR]->s.combed == HB_COMB_NONE)
     {
         // Input buffer is not combed, just make a dup of it
-        hb_buffer_t *buf = hb_buffer_dup(pv->ref[CURR]);
+        hb_buffer_t *buf = hb_vt_buffer_dup(pv->ref[CURR]);
         hb_buffer_list_append(&pv->out_list, buf);
     }
     else

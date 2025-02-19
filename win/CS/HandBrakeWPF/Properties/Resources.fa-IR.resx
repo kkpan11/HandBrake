@@ -59,46 +59,46 @@
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
-  <xsd:schema xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" id="root">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
           <xsd:element name="metadata">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
               </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string"/>
-              <xsd:attribute name="type" type="xsd:string"/>
-              <xsd:attribute name="mimetype" type="xsd:string"/>
-              <xsd:attribute ref="xml:space"/>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="assembly">
             <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string"/>
-              <xsd:attribute name="name" type="xsd:string"/>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="data">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1"/>
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3"/>
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4"/>
-              <xsd:attribute ref="xml:space"/>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="resheader">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required"/>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
             </xsd:complexType>
           </xsd:element>
         </xsd:choice>
@@ -439,10 +439,6 @@ The Activity log may have further information.</value>
   </data>
   <data name="OptionsViewModel_NewUpdate" xml:space="preserve">
     <value>آپدیت جدیدی در دسترس است! لطفاً وبگاه را برای نکات انتشار بررسی کنید.</value>
-  </data>
-  <data name="OptionsViewModel_64bitAvailable" xml:space="preserve">
-    <value>دستگاه شما از نسخه‌ی 64بیتی HandBrake پشتیبانی می‌کند! آن نسخه عملکرد بهتر و ثبات بیشتری نسبت به نسخه‌ی 32بیتی دارد.
-لطفاً وب سایت را برای مشاهده‌ی نکات انتشار بررسی کنید.</value>
   </data>
   <data name="OptionsViewModel_NoNewUpdates" xml:space="preserve">
     <value>فعلاً بروزرسانی جدیدی موجود نیست.</value>
@@ -1117,14 +1113,8 @@ Hint: File overwrite behaviour can be controlled in preferences. </value>
   <data name="MetaDataView_Title" xml:space="preserve">
     <value>فراداده</value>
   </data>
-  <data name="OptionsView_EnableNvencEncoding" xml:space="preserve">
-    <value>اجازه دادن به استفاده از فشرده‌ساز Nvidia NVENC</value>
-  </data>
-  <data name="OptionsView_EnableQuicksyncEncoding" xml:space="preserve">
-    <value>اجازه دادن به استفاده از فشرده‌ساز Intel QuickSync</value>
-  </data>
-  <data name="OptionsView_EnableVceEncoding" xml:space="preserve">
-    <value>Allow use of the AMD VCN Encoders</value>
+  <data name="OptionsView_EnableDirectXDecoding" xml:space="preserve">
+    <value>Allow use of DirectX Decoding</value>
   </data>
   <data name="OptionsView_InvalidFileFormatChars" xml:space="preserve">
     <value>قالب پرونده واردشده حاوی حروف نامعتبر است. آن‌ها حذف شده‌است.</value>
@@ -1221,6 +1211,9 @@ Hint: File overwrite behaviour can be controlled in preferences. </value>
   </data>
   <data name="Options_MinTitleScanLength" xml:space="preserve">
     <value>حداقل مدت یک عنوان DVD و Blu-ray به ثانیه. از عناوین کوچک‌تر صرف‌نظر می‌شود:</value>
+  </data>
+  <data name="Options_KeepDuplicateTitles" xml:space="preserve">
+    <value>Keep duplicate titles on Blu-ray sources (Requires Restart)</value>
   </data>
   <data name="Options_MP4FileExtension" xml:space="preserve">
     <value>پسوند پرونده‌ی MP4:</value>
@@ -1906,13 +1899,13 @@ You can drag/drop or enter the text above.</value>
     <value>Append Number</value>
   </data>
   <data name="FiltersViewAuto_DeblockPreset" xml:space="preserve">
-    <value>نمایش‌پالایه_پالایه‌ی‌هموارسازی</value>
+    <value>FiltersView_DeblockPreset</value>
   </data>
   <data name="FiltersViewAuto_DeblockTune" xml:space="preserve">
     <value>تنظیم هموارسازی:</value>
   </data>
-  <data name="OptionsView_ChoiceOfEncoderHint" xml:space="preserve">
-    <value>انتخاب کردن فشرده‌سازها باعث می‌شود در زبانه‌ی «ویدیو» در دسترس باشند.</value>
+  <data name="OptionsView_EncodeNotes" xml:space="preserve">
+    <value>Note: Not all hardware encoders have extra preferences. All available and supported hardware encoders on this system will be available for selection on the video tab under the video encoder dropdown.</value>
   </data>
   <data name="Queue_RecoverQueueQuestionPlural" xml:space="preserve">
     <value>HandBrake چند پرونده‌ی صف‌های ناتمام را شناسایی کرده است که از چند اجرای HandBrake بوده. آیا می‌خواهید تمام کارهای ناتمام را بازیابی کنید؟</value>
@@ -2297,7 +2290,7 @@ Please choose a different preset.</value>
     <value>توقف</value>
   </data>
   <data name="String1" xml:space="preserve">
-    <value/>
+    <value />
   </data>
   <data name="PresetService_CategoryAlreadyExists" xml:space="preserve">
     <value>نام دسته‌ای که وارد  کردید از قبل وجود دارد. لطفاً یک نام دیگر را وارد کنید.</value>
@@ -2318,7 +2311,7 @@ Please choose a different preset.</value>
     <value>سطحی که هشدارهای «فضای دیسک کم است» را نشان می‌دهد:</value>
   </data>
   <data name="OptionsView_SimultaneousHardwareLimitNotice" xml:space="preserve">
-    <value>Notice: This is the upper limit of simultaneous jobs. Hardware limitations may take effect which lowers the actual number of simultaneous jobs during encoding. Setting will only take affect on the next queue batch or app restart.</value>
+    <value>Notice: This is the upper limit of simultaneous jobs. Hardware limitations may take effect which lowers the actual number of simultaneous jobs during encoding. Setting will only take effect on the next queue batch or app restart.</value>
   </data>
   <data name="Preset_NotAvailable" xml:space="preserve">
     <value>(موجود نیست)</value>
@@ -2839,5 +2832,108 @@ To allow multiple simultaneous encodes, turn on "Process Isolation" in Tools Men
   </data>
   <data name="QueueView_QueueStartTime" xml:space="preserve">
     <value>Queue Start Time:</value>
+  </data>
+  <data name="QueueView_EncodeShutdown" xml:space="preserve">
+    <value>Shutting Down Encode ...</value>
+  </data>
+  <data name="PictureSettingsView_AllowUpscaling" xml:space="preserve">
+    <value>Allow Upscaling</value>
+  </data>
+  <data name="PictureSettingsView_OptimalSize" xml:space="preserve">
+    <value>Optimal Size</value>
+  </data>
+  <data name="OptionsView_Available" xml:space="preserve">
+    <value>Available on this system.</value>
+  </data>
+  <data name="OptionsView_NotAvailable" xml:space="preserve">
+    <value>Not available on this system.</value>
+  </data>
+  <data name="MainView_ScanningStatus" xml:space="preserve">
+    <value>Please wait ...</value>
+  </data>
+  <data name="MainView_Cancel" xml:space="preserve">
+    <value>لغو</value>
+  </data>
+  <data name="MainView_OpenLog" xml:space="preserve">
+    <value>Open Log Window</value>
+  </data>
+  <data name="OptionsView_EnableNvencEncoding" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OptionsView_EnableQuicksyncEncoding" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OptionsView_EnableVceEncoding" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OptionsView_ChoiceOfEncoderHint" xml:space="preserve">
+    <value />
+  </data>
+  <data name="AnamorphicMode_Custom" xml:space="preserve">
+    <value>دلخواه</value>
+  </data>
+  <data name="AnamorphicMode_None" xml:space="preserve">
+    <value>هیچ کدام</value>
+  </data>
+  <data name="AnamorphicMode_Automatic" xml:space="preserve">
+    <value>خودکار</value>
+  </data>
+  <data name="CombDetect_Off" xml:space="preserve">
+    <value>غیرفعال</value>
+  </data>
+  <data name="CombDetect_Custom" xml:space="preserve">
+    <value>دلخواه</value>
+  </data>
+  <data name="CombDetect_Default" xml:space="preserve">
+    <value>پیش‌فرض</value>
+  </data>
+  <data name="DeinterlaceFilter_Off" xml:space="preserve">
+    <value>غیرفعال</value>
+  </data>
+  <data name="Denoise_Off" xml:space="preserve">
+    <value>غیرفعال</value>
+  </data>
+  <data name="Detelecine_Off" xml:space="preserve">
+    <value>غیرفعال</value>
+  </data>
+  <data name="Detelecine_Default" xml:space="preserve">
+    <value>پیش‌فرض</value>
+  </data>
+  <data name="Detelecine_Custom" xml:space="preserve">
+    <value>دلخواه</value>
+  </data>
+  <data name="Sharpen_Off" xml:space="preserve">
+    <value>غیرفعال</value>
+  </data>
+  <data name="Options_MaxTitleScanDuration" xml:space="preserve">
+    <value>Maximum DVD and Blu-ray title duration in seconds. Longer titles will be skipped:</value>
+  </data>
+  <data name="DefaultRangeMode_Chapters" xml:space="preserve">
+    <value>فصل‌</value>
+  </data>
+  <data name="DefaultRangeMode_Seconds" xml:space="preserve">
+    <value>ثانیه</value>
+  </data>
+  <data name="DefaultRangeMode_Frames" xml:space="preserve">
+    <value>فریم</value>
+  </data>
+  <data name="Options_RangeModeSelection" xml:space="preserve">
+    <value>Default Range Mode for Titles:</value>
+  </data>
+  <data name="WhenDone_CustomAction" xml:space="preserve">
+    <value>Custom Action</value>
+  </data>
+  <data name="OptionsView_CustomActionConfig" xml:space="preserve">
+    <value>'Custom Action' Configuration:</value>
+  </data>
+  <data name="MainView_OpenAutonamePreferences" xml:space="preserve">
+    <value>Open Autoname Preferences</value>
+  </data>
+  <data name="Options_RunAction" xml:space="preserve">
+    <value>Run Script / Executable: </value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="OptionsViewModel_PortableMode" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
   </data>
 </root>
