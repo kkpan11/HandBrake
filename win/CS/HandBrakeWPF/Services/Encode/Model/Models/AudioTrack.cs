@@ -322,7 +322,7 @@ namespace HandBrakeWPF.Services.Encode.Model.Models
         {
             get
             {
-                if (this.Encoder != null && this.Encoder.IsPassthrough)
+                if (this.Encoder != null && this.Encoder.IsPassthru)
                 {
                     return "Auto";
                 }
@@ -374,9 +374,9 @@ namespace HandBrakeWPF.Services.Encode.Model.Models
                 this.NotifyOfPropertyChange(() => this.ScannedTrack);
                 this.NotifyOfPropertyChange(() => this.TrackReference);
 
-                if (string.IsNullOrEmpty(this.TrackName))
+                if (!string.IsNullOrEmpty(this.scannedTrack?.Name))
                 {
-                    this.TrackName = !string.IsNullOrEmpty(this.scannedTrack?.Name) ? this.scannedTrack.Name : null;
+                    this.TrackName = this.scannedTrack.Name;
                 }
                 
                 this.GetDefaultMixdownIfNull();
@@ -398,7 +398,7 @@ namespace HandBrakeWPF.Services.Encode.Model.Models
         }
 
         [JsonIgnore]
-        public bool IsPassthru => this.Encoder != null && this.Encoder.IsPassthrough;
+        public bool IsPassthru => this.Encoder != null && this.Encoder.IsPassthru;
 
         [JsonIgnore]
         public IEnumerable<int> Bitrates

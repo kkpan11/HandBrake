@@ -1,6 +1,6 @@
 /* preset.c
 
-   Copyright (c) 2003-2024 HandBrake Team
+   Copyright (c) 2003-2025 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -2050,7 +2050,25 @@ int hb_preset_apply_video(const hb_dict_t *preset, hb_dict_t *job_dict)
                     hb_value_xform(hb_dict_get(preset, "VideoTurboMultiPass"),
                                     HB_VALUE_TYPE_BOOL));
     }
-    
+
+    if ((value = hb_dict_get(preset, "VideoPasshtruHDRDynamicMetadata")) != NULL)
+    {
+        int hdr_dynamic_metadata = HB_HDR_DYNAMIC_METADATA_ALL;
+        if (!strcasecmp(hb_value_get_string(value), "off"))
+        {
+            hdr_dynamic_metadata = HB_HDR_DYNAMIC_METADATA_NONE;
+        }
+        else if (!strcasecmp(hb_value_get_string(value), "hdr10plus"))
+        {
+            hdr_dynamic_metadata = HB_HDR_DYNAMIC_METADATA_HDR10PLUS;
+        }
+        else if (!strcasecmp(hb_value_get_string(value), "dolbyvision"))
+        {
+            hdr_dynamic_metadata = HB_HDR_DYNAMIC_METADATA_DOVI;
+        }
+        hb_dict_set(video_dict, "PasshtruHDRDynamicMetadata", hb_value_int(hdr_dynamic_metadata));
+    }
+
     if ((value = hb_dict_get(preset, "VideoHWDecode")) != NULL)
     {
         hb_dict_set(video_dict, "HardwareDecode", hb_value_xform(value, HB_VALUE_TYPE_INT));
@@ -2956,6 +2974,49 @@ static void und_to_any(hb_value_array_t * list)
     }
 }
 
+static void import_av1_preset_settings_63_0_0(hb_value_t *preset)
+{
+    const char *enc = hb_dict_get_string(preset, "VideoEncoder");
+    int codec = hb_video_encoder_get_from_name(enc);
+
+    if (codec == HB_VCODEC_SVT_AV1 || codec == HB_VCODEC_SVT_AV1_10BIT)
+    {
+        const char *value = hb_dict_get_string(preset, "VideoPreset");
+        int video_preset = value ? atoi(value) : 0;
+
+        if (video_preset > 10)
+        {
+            hb_dict_set_string(preset, "VideoPreset", "10");
+        }
+    }
+}
+
+static void import_svt_av1_tune_61_0_0(hb_value_t *preset)
+{
+    const char *enc = hb_dict_get_string(preset, "VideoEncoder");
+    int codec = hb_video_encoder_get_from_name(enc);
+
+    if (codec == HB_VCODEC_SVT_AV1 || codec == HB_VCODEC_SVT_AV1_10BIT)
+    {
+        const char *tune = hb_dict_get_string(preset, "VideoTune");
+        if (tune == NULL || strlen(tune) == 0)
+        {
+            hb_dict_set_string(preset, "VideoTune", "vq");
+        }
+    }
+}
+
+static void import_dynamic_metadata_preset_settings_60_0_0(hb_value_t *preset)
+{
+    hb_dict_set_string(preset, "VideoPasshtruHDRDynamicMetadata", "all");
+}
+
+static void import_passthru_preset_settings_57_0_0(hb_value_t *preset)
+{
+    int passthru = hb_dict_get_bool(preset, "MetadataPassthrough");
+    hb_dict_set_bool(preset, "MetadataPassthru", passthru);
+}
+
 static void import_av1_preset_settings_55_0_0(hb_value_t *preset)
 {
     const char *enc = hb_dict_get_string(preset, "VideoEncoder");
@@ -3618,6 +3679,8 @@ static void import_audio_0_0_0(hb_value_t *preset)
         hb_value_array_append(copy, hb_value_string("copy:mp3"));
     if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowAACPass")))
         hb_value_array_append(copy, hb_value_string("copy:aac"));
+    if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowVORBISPass")))
+        hb_value_array_append(copy, hb_value_string("copy:vorbis"));
     if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowOPUSPass")))
         hb_value_array_append(copy, hb_value_string("copy:opus"));
     if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowAC3Pass")))
@@ -3628,6 +3691,8 @@ static void import_audio_0_0_0(hb_value_t *preset)
         hb_value_array_append(copy, hb_value_string("copy:dtshd"));
     if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowEAC3Pass")))
         hb_value_array_append(copy, hb_value_string("copy:eac3"));
+    if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowALACPass")))
+        hb_value_array_append(copy, hb_value_string("copy:alac"));
     if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowFLACPass")))
         hb_value_array_append(copy, hb_value_string("copy:flac"));
     if (hb_value_get_bool(hb_dict_get(preset, "AudioAllowTRUEHDPass")))
@@ -3701,9 +3766,38 @@ static void import_video_0_0_0(hb_value_t *preset)
     }
 }
 
+
+static void import_63_0_0(hb_value_t *preset)
+{
+    import_av1_preset_settings_63_0_0(preset);
+}
+
+static void import_61_0_0(hb_value_t *preset)
+{
+    import_svt_av1_tune_61_0_0(preset);
+
+    import_63_0_0(preset);
+}
+
+static void import_60_0_0(hb_value_t *preset)
+{
+    import_dynamic_metadata_preset_settings_60_0_0(preset);
+
+    import_61_0_0(preset);
+}
+
+static void import_57_0_0(hb_value_t *preset)
+{
+    import_passthru_preset_settings_57_0_0(preset);
+
+    import_60_0_0(preset);
+}
+
 static void import_55_0_0(hb_value_t *preset)
 {
     import_av1_preset_settings_55_0_0(preset);
+
+    import_57_0_0(preset);
 }
 
 static void import_53_0_0(hb_value_t *preset)
@@ -3905,6 +3999,26 @@ static int preset_import(hb_value_t *preset, int major, int minor, int micro)
         else if (cmpVersion(major, minor, micro, 55, 0, 0) <= 0)
         {
             import_55_0_0(preset);
+            result = 1;
+        }
+        else if (cmpVersion(major, minor, micro, 57, 0, 0) <= 0)
+        {
+            import_57_0_0(preset);
+            result = 1;
+        }
+        else if (cmpVersion(major, minor, micro, 60, 0, 0) <= 0)
+        {
+            import_60_0_0(preset);
+            result = 1;
+        }
+        else if (cmpVersion(major, minor, micro, 61, 0, 0) <= 0)
+        {
+            import_61_0_0(preset);
+            result = 1;
+        }
+        else if (cmpVersion(major, minor, micro, 63, 0, 0) <= 0)
+        {
+            import_63_0_0(preset);
             result = 1;
         }
 

@@ -1,6 +1,6 @@
 /* bd.c
 
-   Copyright (c) 2003-2024 HandBrake Team
+   Copyright (c) 2003-2025 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -279,7 +279,7 @@ static void show_clip_list( BLURAY_TITLE_INFO * ti )
 /***********************************************************************
  * hb_bd_title_scan
  **********************************************************************/
-hb_title_t * hb_bd_title_scan( hb_bd_t * d, int tt, uint64_t min_duration )
+hb_title_t * hb_bd_title_scan( hb_bd_t * d, int tt, uint64_t min_duration, uint64_t max_duration )
 {
 
     hb_title_t   * title;
@@ -359,6 +359,13 @@ hb_title_t * hb_bd_title_scan( hb_bd_t * d, int tt, uint64_t min_duration )
         hb_log( "bd: ignoring title (too short)" );
         goto fail;
     }
+    
+    if ( max_duration > 0 && ti->duration > max_duration ) 
+    {
+        hb_log( "bd: ignoring title (too long)" );
+        goto fail;
+    }
+    
     if (global_verbosity_level >= 2)
     {
         show_clip_list(ti);
