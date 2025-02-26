@@ -1,6 +1,6 @@
 /* hbffmpeg.c
 
-   Copyright (c) 2003-2024 HandBrake Team
+   Copyright (c) 2003-2025 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -791,6 +791,13 @@ int hb_av_can_use_zscale(enum AVPixelFormat pix_fmt,
                          int in_width, int in_height,
                          int out_width, int out_height)
 {
+
+#if defined (__aarch64__) && defined(_WIN32)
+    {
+        return 0;
+    }
+#endif
+
     if ((in_width % 2)  != 0 || (in_height % 2)  != 0 ||
         (out_width % 2) != 0 || (out_height % 2) != 0)
     {

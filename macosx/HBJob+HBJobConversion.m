@@ -154,6 +154,23 @@
     }
     job->multipass = self.video.multiPass;
 
+    switch (self.video.passthruHDRDynamicMetadata)
+    {
+        case HBVideoHDRDynamicMetadataPassthruOff:
+            job->passthru_dynamic_hdr_metadata = HB_HDR_DYNAMIC_METADATA_NONE;
+            break;
+        case HBVideoHDRDynamicMetadataPassthruHDR10Plus:
+            job->passthru_dynamic_hdr_metadata = HB_HDR_DYNAMIC_METADATA_HDR10PLUS;
+            break;
+        case HBVideoHDRDynamicMetadataPassthruDolbyVision:
+            job->passthru_dynamic_hdr_metadata = HB_HDR_DYNAMIC_METADATA_DOVI;
+            break;
+        case HBVideoHDRDynamicMetadataPassthruAll:
+        default:
+            job->passthru_dynamic_hdr_metadata = HB_HDR_DYNAMIC_METADATA_ALL;
+            break;
+    }
+
     if (hb_video_encoder_get_presets(self.video.encoder) != NULL)
     {
         // advanced x264/x265 options
@@ -370,6 +387,10 @@
     {
         job->acodec_copy_mask |= HB_ACODEC_MP3_PASS;
     }
+    if (audioDefaults.allowVorbisPassthru)
+    {
+        job->acodec_copy_mask |= HB_ACODEC_VORBIS_PASS;
+    }
     if (audioDefaults.allowOpusPassthru)
     {
         job->acodec_copy_mask |= HB_ACODEC_OPUS_PASS;
@@ -377,6 +398,10 @@
     if (audioDefaults.allowTrueHDPassthru)
     {
         job->acodec_copy_mask |= HB_ACODEC_TRUEHD_PASS;
+    }
+    if (audioDefaults.allowALACPassthru)
+    {
+        job->acodec_copy_mask |= HB_ACODEC_ALAC_PASS;
     }
     if (audioDefaults.allowFLACPassthru)
     {

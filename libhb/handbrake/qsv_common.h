@@ -1,6 +1,6 @@
 /* qsv_common.h
  *
- * Copyright (c) 2003-2024 HandBrake Team
+ * Copyright (c) 2003-2025 HandBrake Team
  * This file is part of the HandBrake source code.
  * Homepage: <http://handbrake.fr/>.
  * It may be used under the terms of the GNU General Public License v2.
@@ -86,6 +86,8 @@ typedef struct hb_qsv_info_s
 #define HB_QSV_CAP_AV1_BITSTREAM     (1LL << 41)
     // mfxExtHyperModeParam
 #define HB_QSV_CAP_HYPERENCODE       (1LL << 42)
+    // mfxExtAV1ScreenContentTools
+#define HB_QSV_CAP_AV1_SCREENCONTENT (1LL << 43)
 
     // TODO: add maximum encode resolution, etc.
 } hb_qsv_info_t;
@@ -163,12 +165,13 @@ typedef struct
      * This should cover all encode-compatible extended
      * buffers that can be attached to an mfxVideoParam.
      */
-#define HB_QSV_ENC_NUM_EXT_PARAM_MAX 10
+#define HB_QSV_ENC_NUM_EXT_PARAM_MAX 16
     mfxExtBuffer*         ExtParamArray[HB_QSV_ENC_NUM_EXT_PARAM_MAX];
     mfxExtCodingOption    codingOption;
     mfxExtCodingOption2   codingOption2;
     mfxExtVideoSignalInfo videoSignalInfo;
     mfxExtHyperModeParam hyperEncodeParam;
+    mfxExtAV1ScreenContentTools av1ScreenContentToolsParam;
     mfxExtChromaLocInfo   chromaLocInfo;
     mfxExtMasteringDisplayColourVolume masteringDisplayColourVolume;
     mfxExtContentLightLevelInfo        contentLightLevelInfo;

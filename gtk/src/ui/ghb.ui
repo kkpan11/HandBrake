@@ -1811,7 +1811,7 @@ sync for broken players that do not honor MP4 edit lists.</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkCheckButton" id="MetadataPassthrough">
+                              <object class="GtkCheckButton" id="MetadataPassthru">
                                 <property name="label" translatable="yes">Passthru Common Metadata</property>
                                 <property name="focusable">1</property>
                                 <property name="tooltip-text" translatable="yes">Copy metadata from source to output.</property>
@@ -3601,7 +3601,10 @@ to make bitrate allocation decisions.</property>
 This establishes your default encoder settings.
 Tunes, profiles, levels and extra options string will be applied to this.
 You should generally set this option to the slowest you can bear since slower
-settings will result in better quality or smaller files.</property>
+settings will result in better quality or smaller files.
+
+Adjust the slider to the right to increase compression efficiency at the expense of encoding speed,
+or to the left to increase encoding speed at the expense of compression efficiency.</property>
                                     <property name="adjustment">VideoPresetRange</property>
                                     <property name="hexpand">1</property>
                                     <signal name="value-changed" handler="video_preset_slider_changed_cb" swapped="no"/>
@@ -4551,6 +4554,12 @@ Overrides all other settings.</property>
     <property name="step-increment">5</property>
     <property name="page-increment">10</property>
   </object>
+  <object class="GtkAdjustment" id="max_title_adj">
+    <property name="upper">36000</property>
+    <property name="value">10</property>
+    <property name="step-increment">5</property>
+    <property name="page-increment">10</property>
+  </object>
   <object class="GtkAdjustment" id="preview_count_adj">
     <property name="lower">5</property>
     <property name="upper">60</property>
@@ -5103,6 +5112,21 @@ This permits TrueHD passthru to be selected when automatic passthru selection is
                       </object>
                     </child>
                     <child>
+                      <object class="GtkCheckButton" id="AudioAllowALACPass">
+                        <property name="label" translatable="yes">ALAC</property>
+                        <property name="focusable">1</property>
+                        <property name="tooltip-text" translatable="yes">Enable this if your playback device supports ALAC.
+This permits ALAC passthru to be selected when automatic passthru selection is enabled.</property>
+                        <property name="halign">start</property>
+                        <property name="active">1</property>
+                        <signal name="toggled" handler="audio_passthru_widget_changed_cb" swapped="no"/>
+                        <layout>
+                          <property name="column">2</property>
+                          <property name="row">3</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkCheckButton" id="AudioAllowFLACPass">
                         <property name="label" translatable="yes">FLAC</property>
                         <property name="focusable">1</property>
@@ -5112,8 +5136,8 @@ This permits FLAC passthru to be selected when automatic passthru selection is e
                         <property name="active">1</property>
                         <signal name="toggled" handler="audio_passthru_widget_changed_cb" swapped="no"/>
                         <layout>
-                          <property name="column">2</property>
-                          <property name="row">3</property>
+                          <property name="column">1</property>
+                          <property name="row">4</property>
                         </layout>
                       </object>
                     </child>
@@ -5127,8 +5151,23 @@ This permits AAC passthru to be selected when automatic passthru selection is en
                         <property name="active">1</property>
                         <signal name="toggled" handler="audio_passthru_widget_changed_cb" swapped="no"/>
                         <layout>
-                          <property name="column">1</property>
+                          <property name="column">2</property>
                           <property name="row">4</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton" id="AudioAllowVORBISPass">
+                        <property name="label" translatable="yes">Vorbis</property>
+                        <property name="focusable">1</property>
+                        <property name="tooltip-text" translatable="yes">Enable this if your playback device supports Vorbis.
+This permits Vorbis passthru to be selected when automatic passthru selection is enabled.</property>
+                        <property name="halign">start</property>
+                        <property name="active">1</property>
+                        <signal name="toggled" handler="audio_passthru_widget_changed_cb" swapped="no"/>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">5</property>
                         </layout>
                       </object>
                     </child>
@@ -5143,7 +5182,7 @@ This permits Opus passthru to be selected when automatic passthru selection is e
                         <signal name="toggled" handler="audio_passthru_widget_changed_cb" swapped="no"/>
                         <layout>
                           <property name="column">2</property>
-                          <property name="row">4</property>
+                          <property name="row">5</property>
                         </layout>
                       </object>
                     </child>
@@ -5469,6 +5508,12 @@ Each selected source track will be encoded with all selected encoders.</property
                           <object class="GtkBox" id="hbox66">
                             <property name="spacing">4</property>
                             <child>
+                              <object class="GtkLabel" id="preview_count_label">
+                                <property name="label" translatable="yes">Number of previews</property>
+                                <property name="use-markup">1</property>
+                              </object>
+                            </child>
+                            <child>
                               <object class="GtkSpinButton" id="preview_count">
                                 <property name="focusable">1</property>
                                 <property name="width-chars">6</property>
@@ -5480,17 +5525,17 @@ Each selected source track will be encoded with all selected encoders.</property
                                 </accessibility>
                               </object>
                             </child>
-                            <child>
-                              <object class="GtkLabel" id="preview_count_label">
-                                <property name="label" translatable="yes">Number of previews</property>
-                                <property name="use-markup">1</property>
-                              </object>
-                            </child>
                           </object>
                         </child>
                         <child>
                           <object class="GtkBox" id="hbox60">
                             <property name="spacing">4</property>
+                            <child>
+                              <object class="GtkLabel" id="min_title_duration_label">
+                                <property name="label" translatable="yes">Minimum DVD/Blu-ray title duration (seconds)</property>
+                                <property name="use-markup">1</property>
+                              </object>
+                            </child>
                             <child>
                               <object class="GtkSpinButton" id="MinTitleDuration">
                                 <property name="focusable">1</property>
@@ -5503,10 +5548,27 @@ Each selected source track will be encoded with all selected encoders.</property
                                 </accessibility>
                               </object>
                             </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="spacing">4</property>
                             <child>
-                              <object class="GtkLabel" id="min_title_duration_label">
-                                <property name="label" translatable="yes">Minimum DVD/Blu-ray title duration (seconds)</property>
-                                <property name="use-markup">1</property>
+                              <object class="GtkCheckButton" id="LimitMaxDuration">
+                                <property name="label" translatable="yes">Maximum DVD/Blu-ray title duration (seconds)</property>
+                                <signal name="toggled" handler="pref_changed_cb" swapped="no" />
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSpinButton" id="MaxTitleDuration">
+                                <property name="focusable">1</property>
+                                <property name="width-chars">6</property>
+                                <property name="adjustment">max_title_adj</property>
+                                <property name="numeric">1</property>
+                                <signal name="value-changed" handler="pref_changed_cb" swapped="no"/>
+                                <accessibility>
+                                  <relation name="labelled-by">LimitMaxDuration</relation>
+                                </accessibility>
                               </object>
                             </child>
                           </object>
@@ -5710,6 +5772,28 @@ battery is charged.</property>
                             <property name="focusable">1</property>
                             <property name="halign">start</property>
                             <signal name="toggled" handler="pref_changed_cb" swapped="no"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="spacing">4</property>
+                            <child>
+                              <object class="GtkCheckButton" id="SendFileTo">
+                                <property name="label" translatable="yes">Send file to:</property>
+                                <property name="halign">start</property>
+                                <signal name="toggled" handler="pref_changed_cb" />
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkEntry" id="SendFileToTarget">
+                                <property name="width-chars">30</property>
+                                <property name="truncate-multiline">1</property>
+                                <signal name="changed" handler="pref_changed_cb" swapped="no"/>
+                                <accessibility>
+                                  <relation name="labelled-by">SendFileTo</relation>
+                                </accessibility>
+                              </object>
+                            </child>
                           </object>
                         </child>
                       </object>
@@ -6210,6 +6294,7 @@ battery is charged.</property>
     <property name="icon-name">fr.handbrake.ghb</property>
     <property name="default-width">854</property>
     <property name="default-height">480</property>
+    <property name="css-classes">ghb-preview-window</property>
     <signal name="notify::fullscreened" handler="preview_notify_fullscreen_cb" swapped="no"/>
     <signal name="close-request" handler="preview_close_request_cb" swapped="no"/>
     <property name="child">

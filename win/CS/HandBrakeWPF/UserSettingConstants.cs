@@ -36,6 +36,9 @@ namespace HandBrakeWPF
         public const string SendFile = "SendFile";
         public const string SendFileTo = "SendFileTo";
         public const string SendFileToArgs = "SendFileToArgs";
+        public const string QueueDoneCustomActionEnabled = "QueueDoneCustomActionEnabled";
+        public const string QueueDoneAction = "QueueDoneAction";
+        public const string QueueDoneArguments = "QueueDoneArguments";
         public const string PreventSleep = "PreventSleep";
         public const string PauseOnLowDiskspace = "PauseOnLowDiskspace";
         public const string PauseQueueOnLowDiskspaceLevel = "LowDiskSpaceWarningLevelInBytes";
@@ -48,6 +51,7 @@ namespace HandBrakeWPF
         public const string PreviewScanCount = "previewScanCount";
         public const string Verbosity = "Verbosity";
         public const string MinScanDuration = "MinTitleScanDuration";
+        public const string MaxScanDuration = "MaxTitleScanDuration";
         public const string KeepDuplicateTitles = "KeepDuplicateTitles";
         public const string ProcessPriorityInt = "ProcessPriorityInt";
         public const string SaveLogToCopyDirectory = "SaveLogToCopyDirectory";
@@ -96,5 +100,7 @@ namespace HandBrakeWPF
         public static string RecursiveFolderScan = "RecursiveFolderScan";
         public static string SimpleQueueView = "SimpleQueueView";
         public static string IsLegacyMenuShown = "IsLegacyMenuShown";
+        public static string DefaultRangeMode = "DefaultRangeMode";
+
     }
 }

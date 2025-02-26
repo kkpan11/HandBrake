@@ -5,7 +5,7 @@
  It may be used under the terms of the GNU General Public License. */
 
 #import <Foundation/Foundation.h>
-#import <CoreGraphics/CoreGraphics.h>
+#import <CoreVideo/CoreVideo.h>
 
 @class HBJob;
 @class HBPicture;
@@ -169,12 +169,13 @@ typedef void (^HBCoreCompletionHandler)(HBCoreResult result);
  *  @param urls            the URLs of the input files.
  *  @param index            the index of the desired title. Use 0 to scan every title.
  *  @param previewsNum         the number of previews image to generate.
- *  @param seconds             the minimum duration of the wanted titles in seconds.
+ *  @param minSeconds             the minimum duration of the wanted titles in seconds.
+ *  @param maxSeconds             the maximum duration of the wanted titles in seconds.
  *  @param keepPreviews        whether the previews images are kept on disk or discarded.
  *  @param progressHandler     a block called periodically with the progress information.
  *  @param completionHandler   a block called with the scan result.
  */
-- (void)scanURLs:(NSArray<NSURL *> *)urls titleIndex:(NSUInteger)index previews:(NSUInteger)previewsNum minDuration:(NSUInteger)seconds keepPreviews:(BOOL)keepPreviews hardwareDecoder:(BOOL)hardwareDecoder keepDuplicateTitles:(BOOL)keepDuplicateTitles progressHandler:(HBCoreProgressHandler)progressHandler completionHandler:(HBCoreCompletionHandler)completionHandler;
+- (void)scanURLs:(NSArray<NSURL *> *)urls titleIndex:(NSUInteger)index previews:(NSUInteger)previewsNum minDuration:(NSUInteger)minSeconds maxDuration:(NSUInteger)maxSeconds keepPreviews:(BOOL)keepPreviews hardwareDecoder:(BOOL)hardwareDecoder keepDuplicateTitles:(BOOL)keepDuplicateTitles progressHandler:(HBCoreProgressHandler)progressHandler completionHandler:(HBCoreCompletionHandler)completionHandler;
 
 /**
  *  Cancels the scan execution.
@@ -186,6 +187,17 @@ typedef void (^HBCoreCompletionHandler)(HBCoreResult result);
  *  An array of HBTitles found by the latest scan.
  */
 @property (nonatomic, readonly, copy) NSArray<HBTitle *> *titles;
+
+/**
+ *  This function converts an image created by libhb (specified via index)
+ *  into an CVPixelBuffer.
+ *
+ *  @param index       the index of the desired image.
+ *  @param job           a HBJob instance.
+ *
+ *  @return a CVPixelBuffer of the wanted image, NULL if the index is out of bounds.
+ */
+- (nullable CVPixelBufferRef)copyPixelBufferAtIndex:(NSUInteger)index job:(HBJob *)job CF_RETURNS_RETAINED;
 
 /**
  *  This function converts an image created by libhb (specified via index)

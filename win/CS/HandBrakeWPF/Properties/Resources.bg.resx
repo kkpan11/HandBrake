@@ -59,46 +59,46 @@
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
-  <xsd:schema xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" id="root">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
           <xsd:element name="metadata">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
               </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string"/>
-              <xsd:attribute name="type" type="xsd:string"/>
-              <xsd:attribute name="mimetype" type="xsd:string"/>
-              <xsd:attribute ref="xml:space"/>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="assembly">
             <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string"/>
-              <xsd:attribute name="name" type="xsd:string"/>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="data">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1"/>
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3"/>
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4"/>
-              <xsd:attribute ref="xml:space"/>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="resheader">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required"/>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
             </xsd:complexType>
           </xsd:element>
         </xsd:choice>
@@ -443,10 +443,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.<
   </data>
   <data name="OptionsViewModel_NewUpdate" xml:space="preserve">
     <value>Налична е нова актуализация! Моля, проверете сайта за бележки по новата версия.</value>
-  </data>
-  <data name="OptionsViewModel_64bitAvailable" xml:space="preserve">
-    <value>Вашата система поддържа 64-битовата версия на HandBrake! Тя предлага по-добра производителност и стабилност от тази 32-битовата версия.
-Моля, проверете уебсайта за бележки по новата версия.</value>
   </data>
   <data name="OptionsViewModel_NoNewUpdates" xml:space="preserve">
     <value>Засега няма нови актуализации.</value>
@@ -1119,14 +1115,8 @@ No encoded files will be deleted with this operation. </value>
   <data name="MetaDataView_Title" xml:space="preserve">
     <value>Метаданни</value>
   </data>
-  <data name="OptionsView_EnableNvencEncoding" xml:space="preserve">
-    <value>Позволи употребата на Nvidia NVENC енкодерите</value>
-  </data>
-  <data name="OptionsView_EnableQuicksyncEncoding" xml:space="preserve">
-    <value>Позволи употребата на Intel QuickSync енкодерите</value>
-  </data>
-  <data name="OptionsView_EnableVceEncoding" xml:space="preserve">
-    <value>Позволи употребата на AMD VCN енкодерите</value>
+  <data name="OptionsView_EnableDirectXDecoding" xml:space="preserve">
+    <value>Allow use of DirectX Decoding</value>
   </data>
   <data name="OptionsView_InvalidFileFormatChars" xml:space="preserve">
     <value>Въведеният файлов формат съдържаше невалидни символи. Те бяха премахнати.</value>
@@ -1223,6 +1213,9 @@ No encoded files will be deleted with this operation. </value>
   </data>
   <data name="Options_MinTitleScanLength" xml:space="preserve">
     <value>Минимална продължителност на заглавия в DVD и Blu-ray в секунди. По-къси заглавия ще бъдат пропускани:</value>
+  </data>
+  <data name="Options_KeepDuplicateTitles" xml:space="preserve">
+    <value>Keep duplicate titles on Blu-ray sources (Requires Restart)</value>
   </data>
   <data name="Options_MP4FileExtension" xml:space="preserve">
     <value>MP4 файлово разширение:</value>
@@ -1913,8 +1906,8 @@ You can drag/drop or enter the text above.</value>
   <data name="FiltersViewAuto_DeblockTune" xml:space="preserve">
     <value>Настройка на поправяне на макроблокове</value>
   </data>
-  <data name="OptionsView_ChoiceOfEncoderHint" xml:space="preserve">
-    <value>Изборът на енкодер ще е достъпен в раздела "Видео"</value>
+  <data name="OptionsView_EncodeNotes" xml:space="preserve">
+    <value>Note: Not all hardware encoders have extra preferences. All available and supported hardware encoders on this system will be available for selection on the video tab under the video encoder dropdown.</value>
   </data>
   <data name="Queue_RecoverQueueQuestionPlural" xml:space="preserve">
     <value>HandBrake засече недовършени задачи от опашката. Те ще са от няколко вървящи изпълнения на HandBrake. Искате ли да възстановите всички незавършени задачи?</value>
@@ -2300,7 +2293,7 @@ You can drag/drop or enter the text above.</value>
     <value>Прекрати</value>
   </data>
   <data name="String1" xml:space="preserve">
-    <value/>
+    <value />
   </data>
   <data name="PresetService_CategoryAlreadyExists" xml:space="preserve">
     <value>Името за категория, което въведохте, вече съществува. Моля, изберете различно име.</value>
@@ -2321,7 +2314,7 @@ You can drag/drop or enter the text above.</value>
     <value>Ниво, на което да се показва предупреждение за ниско дисково пространство:</value>
   </data>
   <data name="OptionsView_SimultaneousHardwareLimitNotice" xml:space="preserve">
-    <value>Внимание: Това е максималният лимит на едновременни задачи. Хардуерните ограничения може да играят роля, намалявайки истинския брой едновременни задачи по време на кодиране. Настройките ще влязат в сила на следващата група от опашката или след рестартиране на приложението.</value>
+    <value>Notice: This is the upper limit of simultaneous jobs. Hardware limitations may take effect which lowers the actual number of simultaneous jobs during encoding. Setting will only take effect on the next queue batch or app restart.</value>
   </data>
   <data name="Preset_NotAvailable" xml:space="preserve">
     <value>(Не е налично)</value>
@@ -2843,5 +2836,108 @@ To allow multiple simultaneous encodes, turn on "Process Isolation" in Tools Men
   </data>
   <data name="QueueView_QueueStartTime" xml:space="preserve">
     <value>Queue Start Time:</value>
+  </data>
+  <data name="QueueView_EncodeShutdown" xml:space="preserve">
+    <value>Shutting Down Encode ...</value>
+  </data>
+  <data name="PictureSettingsView_AllowUpscaling" xml:space="preserve">
+    <value>Allow Upscaling</value>
+  </data>
+  <data name="PictureSettingsView_OptimalSize" xml:space="preserve">
+    <value>Optimal Size</value>
+  </data>
+  <data name="OptionsView_Available" xml:space="preserve">
+    <value>Available on this system.</value>
+  </data>
+  <data name="OptionsView_NotAvailable" xml:space="preserve">
+    <value>Not available on this system.</value>
+  </data>
+  <data name="MainView_ScanningStatus" xml:space="preserve">
+    <value>Please wait ...</value>
+  </data>
+  <data name="MainView_Cancel" xml:space="preserve">
+    <value>Отказ</value>
+  </data>
+  <data name="MainView_OpenLog" xml:space="preserve">
+    <value>Open Log Window</value>
+  </data>
+  <data name="OptionsView_EnableNvencEncoding" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OptionsView_EnableQuicksyncEncoding" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OptionsView_EnableVceEncoding" xml:space="preserve">
+    <value />
+  </data>
+  <data name="OptionsView_ChoiceOfEncoderHint" xml:space="preserve">
+    <value />
+  </data>
+  <data name="AnamorphicMode_Custom" xml:space="preserve">
+    <value>Персонализиране</value>
+  </data>
+  <data name="AnamorphicMode_None" xml:space="preserve">
+    <value>Няма</value>
+  </data>
+  <data name="AnamorphicMode_Automatic" xml:space="preserve">
+    <value>Автоматично</value>
+  </data>
+  <data name="CombDetect_Off" xml:space="preserve">
+    <value>Изключено</value>
+  </data>
+  <data name="CombDetect_Custom" xml:space="preserve">
+    <value>Персонализиране</value>
+  </data>
+  <data name="CombDetect_Default" xml:space="preserve">
+    <value>По подразбиране</value>
+  </data>
+  <data name="DeinterlaceFilter_Off" xml:space="preserve">
+    <value>Изключено</value>
+  </data>
+  <data name="Denoise_Off" xml:space="preserve">
+    <value>Изключено</value>
+  </data>
+  <data name="Detelecine_Off" xml:space="preserve">
+    <value>Изключено</value>
+  </data>
+  <data name="Detelecine_Default" xml:space="preserve">
+    <value>По подразбиране</value>
+  </data>
+  <data name="Detelecine_Custom" xml:space="preserve">
+    <value>Персонализиране</value>
+  </data>
+  <data name="Sharpen_Off" xml:space="preserve">
+    <value>Изключено</value>
+  </data>
+  <data name="Options_MaxTitleScanDuration" xml:space="preserve">
+    <value>Maximum DVD and Blu-ray title duration in seconds. Longer titles will be skipped:</value>
+  </data>
+  <data name="DefaultRangeMode_Chapters" xml:space="preserve">
+    <value>Глави</value>
+  </data>
+  <data name="DefaultRangeMode_Seconds" xml:space="preserve">
+    <value>Секунди</value>
+  </data>
+  <data name="DefaultRangeMode_Frames" xml:space="preserve">
+    <value>Кадри</value>
+  </data>
+  <data name="Options_RangeModeSelection" xml:space="preserve">
+    <value>Default Range Mode for Titles:</value>
+  </data>
+  <data name="WhenDone_CustomAction" xml:space="preserve">
+    <value>Custom Action</value>
+  </data>
+  <data name="OptionsView_CustomActionConfig" xml:space="preserve">
+    <value>'Custom Action' Configuration:</value>
+  </data>
+  <data name="MainView_OpenAutonamePreferences" xml:space="preserve">
+    <value>Open Autoname Preferences</value>
+  </data>
+  <data name="Options_RunAction" xml:space="preserve">
+    <value>Run Script / Executable: </value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="OptionsViewModel_PortableMode" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
   </data>
 </root>

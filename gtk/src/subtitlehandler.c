@@ -1,6 +1,6 @@
 /* subtitlehandler.c
  *
- * Copyright (C) 2008-2024 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -110,7 +110,7 @@ subtitle_refresh_list_row_ui(
 
     GString *str = g_string_new("<small>");
     g_string_append(str, burned ? _("Burned Into Video") :
-                                  _("Passthrough"));
+                                  _("Passthru"));
     if (forced)
     {
         g_string_append_printf(str, " (%s)", _("Forced Subtitles Only"));
