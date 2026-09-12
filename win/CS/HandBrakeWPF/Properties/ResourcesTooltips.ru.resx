@@ -118,8 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="FilterView_Deblock" xml:space="preserve">
-    <value>Деблокинг снижает количество блочных артефактов, полученных
-в результате низкокачественного сжатия видео.</value>
+    <value>Деблокинг снижает количество блочных артефактов, полученных в результате низкокачественного сжатия видео.</value>
   </data>
   <data name="FilterView_DecombDeinterlace" xml:space="preserve">
     <value>Выберите параметры фильтра decomb или deinterlace.
@@ -480,9 +479,9 @@ Unsharp может быть настроен для Ultrafine (Очень тон
 Например, субтитры PGS не поддерживаются в MP4</value>
   </data>
   <data name="OptionsView_PresetDisplayModes" xml:space="preserve">
-    <value>Плоский - Шаблоны отображаются в виде плоского списка.
-Частично плоский - Последние 8 шаблонов пользователя отображаются в виде плоского списка, после чего все шаблоны отображаются в списке категорий.
-Категории - Все шаблоны отображаются в подменю для каждой категории.</value>
+    <value>Плоско — шаблоны отображаются в виде плоского списка.
+Частично плоско — последние 8 шаблонов пользователя отображаются в виде плоского списка, далее все шаблоны отображаются в списке категорий.
+По категориям — все шаблоны отображаются в подменю для каждой категории.</value>
   </data>
   <data name="AudioView_AudioDefaults" xml:space="preserve">
     <value>Настройка поведения, определяющего, как эта вкладка автоматически добавит звуковые дорожки при выборе нового источника или названия.</value>
@@ -538,10 +537,10 @@ HB_EXIT_CODE
 Обратите внимание, что при использовании этих режимов возможны неточности в компоновке пользовательского интерфейса. В зависимости от языка, возможно, стоит попробовать оба режима, чтобы найти наиболее подходящий.</value>
   </data>
   <data name="AudioView_Quality" xml:space="preserve">
-    <value>Устанавливает определённый уровень качества для аудио.
-1 - самое низкое качество, 5 - самое высокое качество.
+    <value>Target a specific quality level for audio.
+Higher values mean higher quality.
 
-Битрейт зависит от источника.</value>
+Bitrate will vary source to source.</value>
   </data>
   <data name="OptionsView_DestinationReplacementOptions" xml:space="preserve">
     <value>Следующие параметры можно использовать по отдельности или вместе для создания пути назначения
@@ -564,5 +563,8 @@ HB_EXIT_CODE
   </data>
   <data name="PictureSettingsView_AutomaticKeepAR" xml:space="preserve">
     <value>Changing the displays size will stretch the video</value>
+  </data>
+  <data name="Video_ColourRange" xml:space="preserve">
+    <value>Color Range. Determines the values of the reference black and white. Set to limited to maximize compatibility.</value>
   </data>
 </root>

@@ -97,6 +97,14 @@ namespace HandBrake.Interop.Interop.Interfaces.Model.Encoders
             }
         }
 
+        public bool SupportsMOV
+        {
+            get
+            {
+                return (this.CompatibleContainers & NativeConstants.HB_MUX_MASK_MOV) > 0 || this.CompatibleContainers == -1;
+            }
+        }
+
         public bool SupportsWebM
         {
             get
@@ -149,7 +157,7 @@ namespace HandBrake.Interop.Interop.Interfaces.Model.Encoders
         {
             get
             {
-                return this.ShortName.Contains("flac"); // TODO Find a better way to do this. 
+                return this.ShortName.Contains("flac") || this.ShortName.Contains("alac") || this.ShortName.Contains("pcm") || this.ShortName.Contains("truehd"); 
             }
         }
 

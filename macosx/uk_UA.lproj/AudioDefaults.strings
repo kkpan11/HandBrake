@@ -1,5 +1,5 @@
 /* Class = "NSTableColumn"; headerCell.title = "Mixdown"; ObjectID = "0kT-0J-3k2"; */
-"0kT-0J-3k2.headerCell.title" = "Мікшування";
+"0kT-0J-3k2.headerCell.title" = "Змішування";
 
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "1XC-VS-X3g"; */
 "1XC-VS-X3g.title" = "Text Cell";
@@ -11,10 +11,10 @@
 "6lx-af-rBL.ibExternalAccessibilityDescription" = "Кодек";
 
 /* Class = "NSPopUpButton"; ibShadowedToolTip = "Audio encoder."; ObjectID = "6lx-af-rBL"; */
-"6lx-af-rBL.ibShadowedToolTip" = "Перетворювач аудіо.";
+"6lx-af-rBL.ibShadowedToolTip" = "Аудіоперетворювач.";
 
 /* Class = "NSTextFieldCell"; title = "Audio encoder settings for each selected track:"; ObjectID = "007-WM-RmC"; */
-"007-WM-RmC.title" = "Налаштування перетворювача аудіо для кожної вибраної доріжки:";
+"007-WM-RmC.title" = "Налаштування аудіоперетворювача для кожної вибраної доріжки:";
 
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "7sl-o7-pUh"; */
 "7sl-o7-pUh.title" = "Text Cell";
@@ -25,14 +25,20 @@
 /* Class = "NSButtonCell"; title = "Use only first encoder for secondary audio"; ObjectID = "66v-2g-DHn"; */
 "66v-2g-DHn.title" = "Використовувати лише перший перетворювач для другорядного аудіо";
 
+/* Class = "NSMenuItem"; title = "Off"; ObjectID = "AaG-rx-x5W"; */
+"AaG-rx-x5W.title" = "Вимкнути";
+
 /* Class = "NSTextFieldCell"; title = "Passthru Fallback:"; ObjectID = "AQe-Sg-Qgh"; */
 "AQe-Sg-Qgh.title" = "Запасний варіант для передачі сигналу:";
+
+/* Class = "NSTextFieldCell"; title = "Name:"; ObjectID = "aQn-7q-tQG"; */
+"aQn-7q-tQG.title" = "Ім'я:";
 
 /* Class = "NSScrollView"; ibExternalAccessibilityDescription = "Audio Track Languages"; ObjectID = "aTC-39-h6S"; */
 "aTC-39-h6S.ibExternalAccessibilityDescription" = "Мови для аудіо доріжок";
 
 /* Class = "NSScrollView"; ibShadowedToolTip = "Select the languages to use with the Track Selection Behavior setting."; ObjectID = "aTC-39-h6S"; */
-"aTC-39-h6S.ibShadowedToolTip" = "Оберіть мови для використання з увімкненим налаштуванням Поведінка Вибору Доріжки.";
+"aTC-39-h6S.ibShadowedToolTip" = "Оберіть мови для використання з увімкненим налаштуванням Поведінки Вибору Доріжки.";
 
 /* Class = "NSTextField"; ibExternalAccessibilityDescription = "DRC"; ObjectID = "BaY-Lo-8xn"; */
 "BaY-Lo-8xn.ibExternalAccessibilityDescription" = "DRC";
@@ -85,6 +91,9 @@
 /* Class = "NSButton"; ibShadowedToolTip = "Enable this if your playback device supports MP2. This permits MP2 passthru to be selected when automatic passthru selecion is enabled."; ObjectID = "GHJ-25-kZl"; */
 "GHJ-25-kZl.ibShadowedToolTip" = "Увімкніть це, якщо ваш пристрій відтворення підтримує MP2. Це дозволяє обирати передачу сигналу в MP2, якщо увімкнено автоматичний вибір передачі сигналу.";
 
+/* Class = "NSMenuItem"; title = "Unnamed Tracks"; ObjectID = "gjw-kg-H3W"; */
+"gjw-kg-H3W.title" = "Безіменні доріжки";
+
 /* Class = "NSButton"; ibShadowedToolTip = "Enable this if your playback device supports FLAC. This permits FLAC passthru to be selected when automatic passthru selecion is enabled."; ObjectID = "gOm-E9-8K7"; */
 "gOm-E9-8K7.ibShadowedToolTip" = "Увімкніть, якщо ваш пристрій підтримує відтворення FLAC. Це дозволить вибрати FLAC, коли увімкнено автоматичний вибір.";
 
@@ -98,10 +107,10 @@
 "hHP-dw-nba.ibShadowedToolTip" = "Бітрейт аудіо в кілобітах за секунду (кбіт/с). Чим менше значення, тим гірша якість аудіо. Більші значення призводять до збільшення розміру файлу (і відповідно якості аудіо), проте можуть бути менш сумісними.";
 
 /* Class = "NSPopUpButton"; ibExternalAccessibilityDescription = "Mixdown"; ObjectID = "igm-hS-rrD"; */
-"igm-hS-rrD.ibExternalAccessibilityDescription" = "Мікшування";
+"igm-hS-rrD.ibExternalAccessibilityDescription" = "Змішування";
 
 /* Class = "NSPopUpButton"; ibShadowedToolTip = "Mixdown type. Controls how multi-channel audio is mixed into fewer channels, or whether the original channels are preserved.\n\nDolby Surround and Dolby Pro Logic II convert multi-channel audio to stereo and matrix encode additional channels for surround reproduction on compatible equipment, while maintaining stereo compatibility."; ObjectID = "igm-hS-rrD"; */
-"igm-hS-rrD.ibShadowedToolTip" = "Тип мікшування. Визначає, чи мікшується багатоканальне аудіо в менше число каналів або оригінальні канали зберігаються.\n\nDolby Surround та Dolby Pro Logic II конвертують багатоканальне аудіо в стерео і матрично кодують додаткові канали для об’ємного звучання на підтримуваних пристроях, зберігаючи при цьому сумісність зі стерео.";
+"igm-hS-rrD.ibShadowedToolTip" = "Тип змішування. Визначає, чи змішується багатоканальне аудіо в менше число каналів або оригінальні канали зберігаються.\n\nDolby Surround та Dolby Pro Logic II конвертують багатоканальне аудіо в стерео і матрично перетворюють додаткові канали для об’ємного звучання на підтримуваних пристроях, зберігаючи при цьому сумісність зі стерео.";
 
 /* Class = "NSButton"; ibShadowedToolTip = "Enable this if your playback device supports DTS-HD. This permits DTS-HD passthru to be selected when automatic passthru selecion is enabled."; ObjectID = "IxI-o9-jMs"; */
 "IxI-o9-jMs.ibShadowedToolTip" = "Увімкніть це, якщо ваш пристрій відтворення підтримує DTS-HD. Це дозволяє обирати передачу сигналу в DTS-HD, якщо увімкнено автоматичний вибір передачі сигналу.";
@@ -119,7 +128,7 @@
 "kwM-lz-5lG.title" = "Поведінка Вибору Аудіо";
 
 /* Class = "NSPopUpButton"; ibShadowedToolTip = "Audio encoder to use when a track suitable for passthru is unavailable."; ObjectID = "LdN-Cx-ZJY"; */
-"LdN-Cx-ZJY.ibShadowedToolTip" = "Аудіокодер для використання, коли доріжка, що підходить для передачі сигналу, недоступна.";
+"LdN-Cx-ZJY.ibShadowedToolTip" = "Аудіоперетворювач для використання, коли доріжка, що підходить для передачі сигналу, недоступна.";
 
 /* Class = "NSButtonCell"; title = "DTS-HD"; ObjectID = "LX6-kc-5vq"; */
 "LX6-kc-5vq.title" = "DTS-HD";
@@ -169,11 +178,14 @@
 /* Class = "NSButtonCell"; title = "Vorbis"; ObjectID = "rXl-qc-MHk"; */
 "rXl-qc-MHk.title" = "Vorbis";
 
+/* Class = "NSMenuItem"; title = "All Tracks"; ObjectID = "s0U-gp-0sK"; */
+"s0U-gp-0sK.title" = "Всі доріжки";
+
 /* Class = "NSButtonCell"; title = "ALAC"; ObjectID = "S0X-gJ-f6A"; */
 "S0X-gJ-f6A.title" = "ALAC";
 
 /* Class = "NSTextFieldCell"; title = "Auto Passthru:"; ObjectID = "s6s-EH-5CB"; */
-"s6s-EH-5CB.title" = "Автоматичне Passthru:";
+"s6s-EH-5CB.title" = "Автоматично передавати:";
 
 /* Class = "NSButtonCell"; title = "MP3"; ObjectID = "sdZ-Rx-JoG"; */
 "sdZ-Rx-JoG.title" = "MP3";
@@ -185,7 +197,7 @@
 "u9h-dn-wcK.title" = "E-AC3";
 
 /* Class = "NSButton"; ibShadowedToolTip = "Only the primary audio track will be encoded with the full encoder list. All additional audio tracks will be encoded with first encoder only."; ObjectID = "uF5-6E-EIe"; */
-"uF5-6E-EIe.ibShadowedToolTip" = "Тільки основна звукова доріжка буде закодована за допомогою повного списку кодувальників. Усі додаткові звукові доріжки будуть закодовані лише першим кодувальником.";
+"uF5-6E-EIe.ibShadowedToolTip" = "Тільки основна звукова доріжка буде перетворена за допомогою повного списку перетворювачів. Усі додаткові звукові доріжки будуть перетворені лише першим перетворювачем.";
 
 /* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "uFK-z7-8Yj"; */
 "uFK-z7-8Yj.title" = "Text Cell";
@@ -205,11 +217,17 @@
 /* Class = "NSTextFieldCell"; title = "Table View Cell"; ObjectID = "XKL-2e-Dlv"; */
 "XKL-2e-Dlv.title" = "Table View Cell";
 
+/* Class = "NSButtonCell"; title = "Passthru track name"; ObjectID = "XmJ-lo-ciO"; */
+"XmJ-lo-ciO.title" = "Передавати назву доріжки";
+
 /* Class = "NSTextField"; ibExternalAccessibilityDescription = "Gain"; ObjectID = "xnA-03-Bul"; */
 "xnA-03-Bul.ibExternalAccessibilityDescription" = "Підсилення";
 
 /* Class = "NSTextField"; ibShadowedToolTip = "Audio gain in decibels (dB). Increases or decreases audio volume."; ObjectID = "xnA-03-Bul"; */
 "xnA-03-Bul.ibShadowedToolTip" = "Підсилення аудіо в децибелах (дБ). Збільшує або зменшує гучність аудіо";
+
+/* Class = "NSTextFieldCell"; title = "Autonaming:"; ObjectID = "XOM-af-vzp"; */
+"XOM-af-vzp.title" = "Автоназва:";
 
 /* Class = "NSButtonCell"; title = "MP2"; ObjectID = "Z8O-AS-UdA"; */
 "Z8O-AS-UdA.title" = "MP2";

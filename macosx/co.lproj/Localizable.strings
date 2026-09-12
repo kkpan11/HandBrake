@@ -93,6 +93,9 @@ Touch bar */
 /* Main Window -> Same as source destination open panel */
 "Allow" = "Permette";
 
+/* Preferences -> Output Name Token */
+"Angle" = "Angulu";
+
 /* HBLanguage -> Any language */
 "Any" = "Qualsiasi";
 
@@ -252,6 +255,9 @@ Queue done notification failed message */
 /* Preferences -> Output Name Token */
 "Height" = "Altezza";
 
+/* Queue -> sidebar menu */
+"Hide Sidebar" = "Piattà a barra laterale";
+
 /* Quit Alert -> informative text */
 "If you quit HandBrake your current encode will be reloaded into your queue at next launch. Do you want to quit anyway?" = "S’è vo iscete d’HandBrake, a vostra cudificazione attuale serà ricaricata in a fila d’attesa à u prossimu avviu. Vulete esce quantunque ?";
 
@@ -302,7 +308,7 @@ Queue Stop Alert -> stop and remove first button */
 "No Valid Source Found" = "Ùn si pò truvà nisuna fonte";
 
 /* Add preset window -> picture setting */
-"None" = "Nisunu";
+"None" = "Nisuna";
 
 /* Queue Done Alert -> shut down first button
 Queue Done Alert -> sleep first button */
@@ -342,6 +348,9 @@ Touch bar */
 /* Video -> Framerate */
 "Peak Framerate (VFR)" = "Frequenza di fiure di cresta (VFR)";
 
+/* Queue Window Action Toolbar Item */
+"Perform tasks with the selected items" = "Effettuà e tacche cù l’elementi selezziunati";
+
 /* Touch bar */
 "Play/Pause" = "Lettura / Pausa";
 
@@ -371,6 +380,9 @@ Preview -> window title */
 
 /* Preview -> window title format */
 "Preview - %@ %@" = "Fighjulata - %1$@ %2$@";
+
+/* Preview -> accessibility label */
+"Preview Image, Size: %f x %f, Scale: %.0f%%" = "Fighjulata di a fiura, dimensione : %1$f x %2$f, scala :: %3$.0f%%";
 
 /* Queue Window When Done Toolbar Item */
 "Put Computer to Sleep" = "Mette l’urdinatore in veghja";
@@ -451,6 +463,9 @@ Touch bar */
 /* HBRange -> display name */
 "Seconds" = "Seconde";
 
+/* Queue Window When Done Toolbar Item */
+"Select an action to run when the queue is done" = "Selezziunà un’azzione à fà quandu a fila d’attesa hè compia";
+
 /* Queue Alert -> cancel rip informative text */
 "Select Continue Encoding to dismiss this dialog without making changes." = "Selezziunate « Cuntinuà a cudificazione » per righjittà stu dialogu senza fà nisunu cambiamentu.";
 
@@ -476,6 +491,9 @@ Touch bar */
 
 /* Main Window Presets Toolbar Item */
 "Show Queue Window" = "Affissà a finestra di a fila d’attesa";
+
+/* Queue -> sidebar menu */
+"Show Sidebar" = "Affissà a barra laterale";
 
 /* Queue Window When Done Toolbar Item */
 "Shut Down Computer" = "Piantà l’urdinatore";
@@ -573,6 +591,9 @@ Rename preset window -> name alert message */
 
 /* Preferences -> Output Name Token */
 "Title" = "Titulu";
+
+/* Queue Window Details Toolbar Item */
+"Toggle details sidebar" = "Attivà o disattivà a barra laterale di detaglii";
 
 /* HBLanguage -> Unknown language */
 "Unknown" = "Scunnisciutu";

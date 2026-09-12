@@ -1,6 +1,6 @@
 /* decavcodec.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    Copyright 2022 NVIDIA Corporation
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
@@ -54,7 +54,6 @@
 
 #if HB_PROJECT_FEATURE_QSV
 #include "handbrake/qsv_common.h"
-#include "handbrake/qsv_libav.h"
 #endif
 
 static void compute_frame_duration( hb_work_private_t *pv );
@@ -145,16 +144,6 @@ struct hb_work_private_s
     int                    drop_samples;
     uint64_t               downmix_mask;
 
-#if HB_PROJECT_FEATURE_QSV
-    // QSV-specific settings
-    struct
-    {
-        int                decode;
-        hb_qsv_config      config;
-        const char       * codec_name;
-    } qsv;
-#endif
-
     AVFrame              * hw_frame;
     enum AVPixelFormat     hw_pix_fmt;
 
@@ -167,40 +156,40 @@ static void decodeAudio( hb_work_private_t *pv, packet_info_t * packet_info );
 #define HB_AV_CH_BACK_MASK (AV_CH_BACK_LEFT|AV_CH_BACK_RIGHT)
 #define HB_AV_CH_BOTH_MASK (HB_AV_CH_SIDE_MASK|HB_AV_CH_BACK_MASK)
 
-static int downmix_required(uint64_t target_layout_mask, uint64_t input_layout_mask)
+static int downmix_required(const AVChannelLayout *target_layout_mask, const AVChannelLayout *input_layout_mask)
 {
     /*
      * Side channels can easily be remapped to back channels and vice-versa.
      * Provided the other channels are the same, downmixing is not required.
      */
-    if ((input_layout_mask & HB_AV_CH_SIDE_MASK) == 0 &&
-        (input_layout_mask & HB_AV_CH_BACK_MASK) == HB_AV_CH_BACK_MASK)
+    if (av_channel_layout_subset(input_layout_mask, HB_AV_CH_SIDE_MASK) == 0 &&
+        av_channel_layout_subset(input_layout_mask, HB_AV_CH_BACK_MASK) == HB_AV_CH_BACK_MASK)
     {
-        if ((target_layout_mask & HB_AV_CH_BACK_MASK) == 0 &&
-            (target_layout_mask & HB_AV_CH_SIDE_MASK) == HB_AV_CH_SIDE_MASK)
+        if (av_channel_layout_subset(target_layout_mask, HB_AV_CH_BACK_MASK) == 0 &&
+            av_channel_layout_subset(target_layout_mask, HB_AV_CH_SIDE_MASK) == HB_AV_CH_SIDE_MASK)
         {
             // input has back channels but not side channels
             // target has the opposite (sides but not backs)
-            return ((input_layout_mask & ~HB_AV_CH_BOTH_MASK) !=
-                    (target_layout_mask & ~HB_AV_CH_BOTH_MASK));
+            return (av_channel_layout_subset(input_layout_mask, ~HB_AV_CH_BOTH_MASK) !=
+                    av_channel_layout_subset(target_layout_mask, ~HB_AV_CH_BOTH_MASK));
         }
     }
-    if ((input_layout_mask & HB_AV_CH_BACK_MASK) == 0 &&
-        (input_layout_mask & HB_AV_CH_SIDE_MASK) == HB_AV_CH_SIDE_MASK)
+    if (av_channel_layout_subset(input_layout_mask, HB_AV_CH_BACK_MASK) == 0 &&
+        av_channel_layout_subset(input_layout_mask, HB_AV_CH_SIDE_MASK) == HB_AV_CH_SIDE_MASK)
     {
-        if ((target_layout_mask & HB_AV_CH_SIDE_MASK) == 0 &&
-            (target_layout_mask & HB_AV_CH_BACK_MASK) == HB_AV_CH_BACK_MASK)
+        if (av_channel_layout_subset(target_layout_mask, HB_AV_CH_SIDE_MASK) == 0 &&
+            av_channel_layout_subset(target_layout_mask, HB_AV_CH_BACK_MASK) == HB_AV_CH_BACK_MASK)
         {
             // input has side channels but not back channels
             // target has the opposite (backs but not sides)
-            return ((input_layout_mask & ~HB_AV_CH_BOTH_MASK) !=
-                    (target_layout_mask & ~HB_AV_CH_BOTH_MASK));
+            return (av_channel_layout_subset(input_layout_mask, ~HB_AV_CH_BOTH_MASK) !=
+                    av_channel_layout_subset(target_layout_mask, ~HB_AV_CH_BOTH_MASK));
         }
     }
-    return (input_layout_mask != target_layout_mask);
+    return av_channel_layout_compare(input_layout_mask, target_layout_mask);
 }
 
-static uint64_t ac3_downmix_mask(int hb_mixdown, int normalized, uint64_t input_layout_mask, const char **dmix_mode)
+static uint64_t ac3_downmix_mask(int hb_mixdown, int normalized, const AVChannelLayout *input_layout, const char **dmix_mode)
 {
     /*
      * ac3/eac3 bitstreams contain mix levels for center, surround and LFE channels.
@@ -231,22 +220,30 @@ static uint64_t ac3_downmix_mask(int hb_mixdown, int normalized, uint64_t input_
             default:
                 return 0;
         }
-        if (mask && downmix_required(mask, input_layout_mask))
+        if (mask)
         {
-            /*
-             * We also set the existing decoder option "dmix_mode" to 2 (AC3_DMIXMOD_LORO)
-             * which is currently ignored by the decoder but should (theoretically) ensure
-             * we always get a regular Lo/Ro downmix, if the decoder were to ever gain the
-             * ability to do a Dolby/PLII downmix in the future.
-             */
-            *dmix_mode = "2";
-            return mask;
+            AVChannelLayout mask_layout = {0};
+            av_channel_layout_from_mask(&mask_layout, mask);
+
+            if (downmix_required(&mask_layout, input_layout))
+            {
+                /*
+                 * We also set the existing decoder option "dmix_mode" to 2 (AC3_DMIXMOD_LORO)
+                 * which is currently ignored by the decoder but should (theoretically) ensure
+                 * we always get a regular Lo/Ro downmix, if the decoder were to ever gain the
+                 * ability to do a Dolby/PLII downmix in the future.
+                 */
+                *dmix_mode = "2";
+                av_channel_layout_uninit(&mask_layout);
+                return mask;
+            }
+            av_channel_layout_uninit(&mask_layout);
         }
     }
     return 0;
 }
 
-static uint64_t dca_downmix_mask(int hb_mixdown, int normalized, uint64_t input_layout_mask)
+static uint64_t dca_downmix_mask(int hb_mixdown, int normalized, const AVChannelLayout *input_layout)
 {
     /*
      * AV_CODEC_ID_DTS
@@ -265,7 +262,7 @@ static uint64_t dca_downmix_mask(int hb_mixdown, int normalized, uint64_t input_
     return 0;
 }
 
-static uint64_t truehd_downmix_mask(int hb_mixdown, int normalized, uint64_t input_layout_mask)
+static uint64_t truehd_downmix_mask(int hb_mixdown, int normalized, const AVChannelLayout *input_layout)
 {
     /*
      * TrueHD bitstreams are made up of multiple "substreams" which are
@@ -293,50 +290,56 @@ static uint64_t truehd_downmix_mask(int hb_mixdown, int normalized, uint64_t inp
                 mask = hb_ff_mixdown_xlat(hb_mixdown, NULL);
                 break;
         }
-        if (mask && downmix_required(mask, input_layout_mask))
+        if (mask)
         {
-            if (mask == AV_CH_LAYOUT_STEREO)
+            AVChannelLayout mask_layout = {0};
+            av_channel_layout_from_mask(&mask_layout, mask);
+
+            if (downmix_required(&mask_layout, input_layout))
             {
+                if (mask == AV_CH_LAYOUT_STEREO)
+                {
+                    /*
+                     * The majority of TrueHD tracks have a Stereo first
+                     * substream, even when the second substream is Mono.
+                     */
+                    return mask;
+                }
+                if (hb_mixdown == HB_AMIXDOWN_MONO)
+                {
+                    /*
+                     * It is unlikely that any substream configuration will
+                     * give us an embedded Mono downmix (except in the case
+                     * where the full input layout is Mono, but in said case
+                     * a downmix is not required) however it may be possible
+                     * to extract a Stereo downmix and let hb_audio_resample
+                     * take care of downmixing that to Mono for final output.
+                     *
+                     * Do it after downmix_required() so we don't accidentally
+                     * request a Stereo downmix when the input is already Mono.
+                     */
+                    return AV_CH_LAYOUT_STEREO;
+                }
                 /*
-                 * The majority of TrueHD tracks have a Stereo first
-                 * substream, even when the second substream is Mono.
-                 */
-                return mask;
-            }
-            if (hb_mixdown == HB_AMIXDOWN_MONO)
-            {
-                /*
-                 * It is unlikely that any substream configuration will
-                 * give us an embedded Mono downmix (except in the case
-                 * where the full input layout is Mono, but in said case
-                 * a downmix is not required) however it may be possible
-                 * to extract a Stereo downmix and let hb_audio_resample
-                 * take care of downmixing that to Mono for final output.
+                 * Which downmix(es) are possible depend on the layout for each specific substream
+                 * combination, but we cannot query the substream-specific layout from the decoder.
+                 * However, excepting the Stereo to Mono case already handled above, it should be
+                 * safe to assume that each additional substream contains more channels than the
+                 * previous one, thus a downmix should only be possible when the all-substreams
+                 * layout is a superset of the target layout.
                  *
-                 * Do it after downmix_required() so we don't accidentally
-                 * request a Stereo downmix when the input is already Mono.
+                 * Note: when requesting a layout with fewer channels than a given substream's
+                 * layout but more channels than the previous substream, libavcodec's decoder
+                 * will give us the substream with more channels, so we don't have to worry
+                 * about having to accidentally upmix in hb_audio_resample down the line.
+                 * For example input with embedded stereo and 5.1(side) then finally 7.1,
+                 * and a downmix channel layout of, say, "3.1" (from an imaginary future
+                 * HB mixdown), the decoder would give us "5.1(side)" rather than stereo.
                  */
-                return AV_CH_LAYOUT_STEREO;
-            }
-            /*
-             * Which downmix(es) are possible depend on the layout for each specific substream
-             * combination, but we cannot query the substream-specific layout from the decoder.
-             * However, excepting the Stereo to Mono case already handled above, it should be
-             * safe to assume that each additional substream contains more channels than the
-             * previous one, thus a downmix should only be possible when the all-substreams
-             * layout is a superset of the target layout.
-             *
-             * Note: when requesting a layout with fewer channels than a given substream's
-             * layout but more channels than the previous substream, libavcodec's decoder
-             * will give us the substream with more channels, so we don't have to worry
-             * about having to accidentally upmix in hb_audio_resample down the line.
-             * For example input with embedded stereo and 5.1(side) then finally 7.1,
-             * and a downmix channel layout of, say, "3.1" (from an imaginary future
-             * HB mixdown), the decoder would give us "5.1(side)" rather than stereo.
-             */
-            if (mask == (mask & input_layout_mask))
-            {
-                return mask;
+                if (mask == (mask & av_channel_layout_subset(input_layout, mask)))
+                {
+                    return mask;
+                }
             }
         }
     }
@@ -440,19 +443,19 @@ static int decavcodecaInit( hb_work_object_t * w, hb_job_t * job )
             case AV_CODEC_ID_EAC3:
                 downmix_mask = ac3_downmix_mask(w->audio->config.out.mixdown,
                                                 w->audio->config.out.normalize_mix_level,
-                                                w->audio->config.in.channel_layout, &dmix_mode);
+                                                w->audio->config.in.ch_layout, &dmix_mode);
                 break;
 
             case AV_CODEC_ID_DTS:
                 downmix_mask = dca_downmix_mask(w->audio->config.out.mixdown,
                                                 w->audio->config.out.normalize_mix_level,
-                                                w->audio->config.in.channel_layout);
+                                                w->audio->config.in.ch_layout);
                 break;
 
             case AV_CODEC_ID_TRUEHD:
                 downmix_mask = truehd_downmix_mask(w->audio->config.out.mixdown,
                                                    w->audio->config.out.normalize_mix_level,
-                                                   w->audio->config.in.channel_layout);
+                                                   w->audio->config.in.ch_layout);
                 break;
 
             default:
@@ -837,6 +840,7 @@ static int decavcodecaBSInfo( hb_work_object_t *w, const hb_buffer_t *buf,
     hb_audio_t *audio = w->audio;
 
     memset( info, 0, sizeof(*info) );
+    info->ch_layout = calloc(1, sizeof(*info->ch_layout));
 
     if ( pv && pv->context )
     {
@@ -1014,46 +1018,21 @@ static int decavcodecaBSInfo( hb_work_object_t *w, const hb_buffer_t *buf,
                          * Only do this in BSInfo as overriding the layout
                          * elsewhere could break downmixing, remapping etc.
                          */
-                        info->channel_layout = AV_CH_LAYOUT_STEREO_DOWNMIX;
+                        AVChannelLayout stereo_downmix = AV_CHANNEL_LAYOUT_STEREO_DOWNMIX;
+                        av_channel_layout_copy(info->ch_layout, &stereo_downmix);
                     }
                     else
                     {
-                        if (frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE)
+                        if (frame->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC)
                         {
-                            info->channel_layout = frame->ch_layout.u.mask;
-                        }
-                        else if (frame->ch_layout.order == AV_CHANNEL_ORDER_CUSTOM)
-                        {
-                            AVChannelLayout channel_layout;
-                            av_channel_layout_copy(&channel_layout, &frame->ch_layout);
-                            int result = av_channel_layout_retype(&channel_layout,
-                                                                  AV_CHANNEL_ORDER_NATIVE,
-                                                                  0);
-                            if (result == 0)
-                            {
-                                info->channel_layout = channel_layout.u.mask;
-                            }
-                            else
-                            {
-                                hb_deep_log(2, "decavcodec: unsupported custom channel order");
-                            }
-                            av_channel_layout_uninit(&channel_layout);
+                            av_channel_layout_default(info->ch_layout, frame->ch_layout.nb_channels);
                         }
                         else
                         {
-                            hb_deep_log(2, "decavcodec: unsupported custom channel order");
+                            av_channel_layout_copy(info->ch_layout, &frame->ch_layout);
                         }
                     }
 
-                    if (info->channel_layout == 0)
-                    {
-                        // Channel layout was not set.  Guess a layout based
-                        // on number of channels.
-                        AVChannelLayout channel_layout;
-                        av_channel_layout_default(&channel_layout, frame->ch_layout.nb_channels);
-                        info->channel_layout = channel_layout.u.mask;
-                        av_channel_layout_uninit(&channel_layout);
-                    }
                     if (context->codec_id == AV_CODEC_ID_AC3 ||
                         context->codec_id == AV_CODEC_ID_EAC3)
                     {
@@ -1090,7 +1069,6 @@ static int decavcodecaBSInfo( hb_work_object_t *w, const hb_buffer_t *buf,
 
     info->profile = context->profile;
     info->level = context->level;
-    info->channel_map = &hb_libav_chan_map;
 
     if ( parser != NULL )
         av_parser_close( parser );
@@ -1325,7 +1303,7 @@ static hb_buffer_t *copy_frame( hb_work_private_t *pv )
         }
 
         // Check for Dolby Vision and store the first RPU found
-        // eventually to attach to the the initial black buffer
+        // eventually to attach to the initial black buffer
         if (pv->title->initial_rpu == NULL)
         {
             int type = AV_FRAME_DATA_DOVI_RPU_BUFFER;
@@ -1456,7 +1434,7 @@ int reinit_video_filters(hb_work_private_t * pv)
     {
         settings = hb_dict_init();
 #if HB_PROJECT_FEATURE_QSV && (defined( _WIN32 ) || defined( __MINGW32__ ))
-        if (hb_qsv_full_path_is_enabled(pv->job))
+        if (pv->frame->hw_frames_ctx && pv->job->hw_pix_fmt == AV_PIX_FMT_QSV)
         {
             hb_dict_set(settings, "w", hb_value_int(orig_width));
             hb_dict_set(settings, "h", hb_value_int(orig_height));
@@ -1466,7 +1444,7 @@ int reinit_video_filters(hb_work_private_t * pv)
         }
         else
 #endif
-        if (pv->frame->hw_frames_ctx && pv->job->hw_pix_fmt == AV_PIX_FMT_CUDA)
+        if (pv->frame->hw_frames_ctx && pv->job && pv->job->hw_pix_fmt == AV_PIX_FMT_CUDA)
         {
             if (color_range != pv->frame->color_range)
             {
@@ -1480,6 +1458,20 @@ int reinit_video_filters(hb_work_private_t * pv)
             hb_dict_set(settings, "format", hb_value_string(av_get_pix_fmt_name(pv->job->input_pix_fmt)));
             hb_avfilter_append_dict(filters, "scale_cuda", settings);
         }
+        else if (pv->frame->hw_frames_ctx && pv->job && pv->job->hw_pix_fmt == AV_PIX_FMT_D3D11)
+        {
+            hb_dict_set(settings, "width", hb_value_int(orig_width));
+            hb_dict_set(settings, "height", hb_value_int(orig_height));
+            hb_dict_set(settings, "format", hb_value_string(av_get_pix_fmt_name(pv->job->input_pix_fmt)));
+            hb_avfilter_append_dict(filters, "scale_d3d11", settings);
+        }
+#if HB_PROJECT_FEATURE_AMFDEC
+        else if (pv->frame->hw_frames_ctx && pv->job && pv->job->hw_pix_fmt == AV_PIX_FMT_AMF_SURFACE)
+        {
+            hb_dict_set(settings, "format", hb_value_string(av_get_pix_fmt_name(pv->job->input_pix_fmt)));
+            hb_avfilter_append_dict(filters, "vpp_amf", settings);
+        }
+#endif
         else if (hb_av_can_use_zscale(pv->frame->format,
                                       pv->frame->width, pv->frame->height,
                                       orig_width, orig_height))
@@ -1512,7 +1504,7 @@ int reinit_video_filters(hb_work_private_t * pv)
     if (pv->title->rotation != HB_ROTATION_0)
     {
 #if HB_PROJECT_FEATURE_QSV
-        if (hb_qsv_full_path_is_enabled(pv->job))
+        if (pv->frame->hw_frames_ctx && pv->job->hw_pix_fmt == AV_PIX_FMT_QSV)
         {
             switch (pv->title->rotation)
             {
@@ -1668,6 +1660,15 @@ static void filter_video(hb_work_private_t *pv)
         pv->frame->color_trc       = pv->title->color_transfer;
         pv->frame->colorspace      = pv->title->color_matrix;
         pv->frame->color_range     = pv->title->color_range;
+    }
+
+    // FIXME: AVCOL_SPC_IPT_C2 is not well supported
+    // by filter graph link negotiation yet
+    if (pv->frame->colorspace == AVCOL_SPC_IPT_C2)
+    {
+        pv->frame->color_primaries = AVCOL_PRI_UNSPECIFIED;
+        pv->frame->color_trc       = AVCOL_TRC_UNSPECIFIED;
+        pv->frame->colorspace      = AVCOL_SPC_UNSPECIFIED;
     }
 
     // J pixel formats are mostly deprecated, however
@@ -1842,71 +1843,16 @@ static int decavcodecvInit( hb_work_object_t * w, hb_job_t * job )
         pv->next_pts = 0;
     hb_buffer_list_clear(&pv->list);
 
-#if HB_PROJECT_FEATURE_QSV
-    pv->qsv.decode = hb_qsv_decode_is_enabled(job);
-    if (pv->qsv.decode)
-    {
-        pv->qsv.codec_name = hb_qsv_decode_get_codec_name(w->codec_param);
-        pv->qsv.config.io_pattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
-        if(hb_qsv_get_memory_type(job) == MFX_IOPATTERN_OUT_VIDEO_MEMORY)
-        {
-            hb_qsv_info_t *info = hb_qsv_encoder_info_get(hb_qsv_get_adapter_index(), job->vcodec);
-            if (info != NULL)
-            {
-                // setup the QSV configuration
-                pv->qsv.config.io_pattern         = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-                pv->qsv.config.impl_requested     = info->implementation;
-                pv->qsv.config.async_depth        = job->qsv.async_depth;
-                pv->qsv.config.sync_need          =  0;
-                pv->qsv.config.usage_threaded     =  1;
-                pv->qsv.config.additional_buffers = 64; // FIFO_LARGE
-                if (info->capabilities & HB_QSV_CAP_RATECONTROL_LA)
-                {
-                    // more surfaces may be needed for the lookahead
-                    pv->qsv.config.additional_buffers = 160;
-                }
-                if (!pv->job->qsv.ctx)
-                {
-                    hb_error( "decavcodecvInit: no context" );
-                    return 1;
-                }
-                pv->job->qsv.ctx->full_path_is_enabled = 1;
-                if (!pv->job->qsv.ctx->hb_dec_qsv_frames_ctx)
-                {
-                    pv->job->qsv.ctx->hb_dec_qsv_frames_ctx = av_mallocz(sizeof(HBQSVFramesContext));
-                    if(!pv->job->qsv.ctx->hb_dec_qsv_frames_ctx)
-                    {
-                        hb_error( "decavcodecvInit: HBQSVFramesContext dec alloc failed" );
-                        return 1;
-                    }
-                }
-                if (!pv->job->qsv.ctx->dec_space)
-                {
-                    pv->job->qsv.ctx->dec_space = av_mallocz(sizeof(hb_qsv_space));
-                    if(!pv->job->qsv.ctx->dec_space)
-                    {
-                        hb_error( "decavcodecvInit: dec_space alloc failed" );
-                        return 1;
-                    }
-                    pv->job->qsv.ctx->dec_space->is_init_done = 1;
-                }
-            }
-        }
-    }
-#endif
-
     if( pv->job && pv->job->title && !pv->job->title->has_resolution_change )
     {
         pv->threads = HB_FFMPEG_THREADS_AUTO;
     }
 
-#if HB_PROJECT_FEATURE_QSV
-    if (pv->qsv.decode)
+    if (w->hw_device_ctx)
     {
-        pv->codec = avcodec_find_decoder_by_name(pv->qsv.codec_name);
+        pv->codec = w->hw_accel->find_decoder(w->codec_param);
     }
     else
-#endif
     {
         pv->codec = avcodec_find_decoder(w->codec_param);
     }
@@ -1915,6 +1861,8 @@ static int decavcodecvInit( hb_work_object_t * w, hb_job_t * job )
         hb_log( "decavcodecvInit: failed to find codec for id (%d)", w->codec_param );
         return 1;
     }
+
+    hb_deep_log(2, "decavcodecvInit: using decoder %s", pv->codec->name);
 
     pv->context = avcodec_alloc_context3( pv->codec );
     pv->context->workaround_bugs = FF_BUG_AUTODETECT;
@@ -1928,7 +1876,7 @@ static int decavcodecvInit( hb_work_object_t * w, hb_job_t * job )
         av_buffer_replace(&pv->context->hw_device_ctx, w->hw_device_ctx);
 
         if (job == NULL ||
-            (job->hw_pix_fmt == AV_PIX_FMT_NONE && job->hw_decode & HB_DECODE_SUPPORT_FORCE_HW))
+            (job->hw_pix_fmt == AV_PIX_FMT_NONE && job->hw_decode & HB_DECODE_FORCE_HW))
         {
             pv->hw_frame = av_frame_alloc();
         }
@@ -1949,15 +1897,33 @@ static int decavcodecvInit( hb_work_object_t * w, hb_job_t * job )
         }
 
 #if HB_PROJECT_FEATURE_QSV
-        if (pv->qsv.decode)
+        if (w->hw_accel && w->hw_accel->type == AV_HWDEVICE_TYPE_QSV)
         {
-            if (hb_hwaccel_is_full_hardware_pipeline_enabled(pv->job))
+            if (job && job->hw_pix_fmt != AV_PIX_FMT_NONE)
             {
-                hb_hwaccel_hwframes_ctx_init(pv->context, job);
-                job->qsv.ctx->hb_ffmpeg_qsv_hw_frames_ctx = av_buffer_ref(pv->context->hw_frames_ctx);
+                hb_hwaccel_hwframes_ctx_init(pv->context, job->input_pix_fmt, job->hw_pix_fmt);
             }
             if (pv->context->codec_id == AV_CODEC_ID_HEVC)
+            {
                 av_dict_set( &av_opts, "load_plugin", "hevc_hw", 0 );
+            }
+        }
+#endif
+
+#if HB_PROJECT_FEATURE_MF
+        if (w->hw_accel && w->hw_accel->type == AV_HWDEVICE_TYPE_D3D11VA)
+        {
+           pv->context->extra_hw_frames = 30;
+        }
+#endif
+
+#if HB_PROJECT_FEATURE_AMFDEC
+        if (w->hw_accel && w->hw_accel->type == AV_HWDEVICE_TYPE_AMF)
+        {
+            if (job && job->hw_pix_fmt != AV_PIX_FMT_NONE)
+            {
+                hb_hwaccel_hwframes_ctx_init(pv->context, job->input_pix_fmt, job->hw_pix_fmt);
+            }
         }
 #endif
 
@@ -2490,29 +2456,23 @@ static int decavcodecvInfo( hb_work_object_t *w, hb_work_info_t *info )
     info->color_range     = pv->context->color_range;
     info->chroma_location = pv->context->chroma_sample_location;
 
-    info->video_decode_support = HB_DECODE_SUPPORT_SW;
+    info->video_decode_support = HB_DECODE_SW;
 
 #if HB_PROJECT_FEATURE_QSV
     if (hb_qsv_available())
     {
-        if (hb_qsv_decode_is_codec_supported(hb_qsv_get_adapter_index(), pv->context->codec_id, pv->context->pix_fmt, pv->context->width, pv->context->height))
+        if (hb_qsv_decode_is_codec_supported(hb_qsv_get_adapter_index(), pv->context->codec_id,
+            pv->context->pix_fmt, pv->context->width, pv->context->height))
         {
-            info->video_decode_support |= HB_DECODE_SUPPORT_QSV;
+            info->video_decode_support |= HB_DECODE_QSV;
         }
     }
 #endif
 
-    if (pv->context->pix_fmt == AV_PIX_FMT_CUDA)
+    hb_hwaccel_t *hwaccel = hb_get_hwaccel_from_pix_fmt(pv->context->pix_fmt);
+    if (hwaccel != NULL)
     {
-        info->video_decode_support |= HB_DECODE_SUPPORT_NVDEC;
-    }
-    else if (pv->context->pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX)
-    {
-        info->video_decode_support |= HB_DECODE_SUPPORT_VIDEOTOOLBOX;
-    }
-    else if (pv->context->pix_fmt == AV_PIX_FMT_D3D11)
-    {
-        info->video_decode_support |= HB_DECODE_SUPPORT_MF;
+        info->video_decode_support |= hwaccel->id;
     }
 
     return 1;
@@ -2678,7 +2638,7 @@ static void decodeAudio(hb_work_private_t *pv, packet_info_t * packet_info)
                 log_decoder_downmix_mismatch(pv->downmix_mask, channel_layout.u.mask);
                 pv->downmix_mask = 0; // don't spam the log
             }
-            if (channel_layout.order != AV_CHANNEL_ORDER_NATIVE || channel_layout.u.mask == 0)
+            if (channel_layout.order == AV_CHANNEL_ORDER_UNSPEC)
             {
                 AVChannelLayout default_ch_layout;
                 av_channel_layout_default(&default_ch_layout, pv->frame->ch_layout.nb_channels);

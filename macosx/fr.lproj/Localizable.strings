@@ -93,6 +93,9 @@ Touch bar */
 /* Main Window -> Same as source destination open panel */
 "Allow" = "Autoriser";
 
+/* Preferences -> Output Name Token */
+"Angle" = "Angle";
+
 /* HBLanguage -> Any language */
 "Any" = "Tout";
 
@@ -167,7 +170,7 @@ Preferences -> Output Name Token */
 "Date" = "Date";
 
 /* Delete preset alert -> first button */
-"Delete Preset" = "Effacer le préréglage";
+"Delete Preset" = "Supprimer le préréglage";
 
 /* Delete preset alert -> first button */
 "Delete Presets" = "Supprimer les préréglages";
@@ -252,6 +255,9 @@ Queue done notification failed message */
 /* Preferences -> Output Name Token */
 "Height" = "Hauteur";
 
+/* Queue -> sidebar menu */
+"Hide Sidebar" = "Masquer la barre latérale";
+
 /* Quit Alert -> informative text */
 "If you quit HandBrake your current encode will be reloaded into your queue at next launch. Do you want to quit anyway?" = "Si vous quittez HandBrake, votre encodage actuel sera remis en file d'attente au prochain démarrage. Voulez-vous quand même quitter ?";
 
@@ -302,7 +308,7 @@ Queue Stop Alert -> stop and remove first button */
 "No Valid Source Found" = "Aucune source valide trouvée";
 
 /* Add preset window -> picture setting */
-"None" = "Aucune";
+"None" = "Aucun";
 
 /* Queue Done Alert -> shut down first button
 Queue Done Alert -> sleep first button */
@@ -342,6 +348,9 @@ Touch bar */
 /* Video -> Framerate */
 "Peak Framerate (VFR)" = "Fréquence de pointe (VFR)";
 
+/* Queue Window Action Toolbar Item */
+"Perform tasks with the selected items" = "Exécuter les tâches sur les objets sélectionnés";
+
 /* Touch bar */
 "Play/Pause" = "Lecture/Pause";
 
@@ -371,6 +380,9 @@ Preview -> window title */
 
 /* Preview -> window title format */
 "Preview - %@ %@" = "Aperçu - %1$@ %2$@";
+
+/* Preview -> accessibility label */
+"Preview Image, Size: %f x %f, Scale: %.0f%%" = "Aperçu de l'image, Taille : %1$f x %2$f, Échelle : %3$.0f%%";
 
 /* Queue Window When Done Toolbar Item */
 "Put Computer to Sleep" = "Mettre en veille l'ordinateur";
@@ -451,6 +463,9 @@ Touch bar */
 /* HBRange -> display name */
 "Seconds" = "Secondes";
 
+/* Queue Window When Done Toolbar Item */
+"Select an action to run when the queue is done" = "Sélectionnez une action à effectuer lorsque la file d'attente est complétée";
+
 /* Queue Alert -> cancel rip informative text */
 "Select Continue Encoding to dismiss this dialog without making changes." = "Choisissez de Continuer l'encodage pour fermer cette fenêtre sans effectuer de changement.";
 
@@ -477,6 +492,9 @@ Touch bar */
 /* Main Window Presets Toolbar Item */
 "Show Queue Window" = "Afficher la fenêtre de la file d'attente";
 
+/* Queue -> sidebar menu */
+"Show Sidebar" = "Afficher la barre latérale";
+
 /* Queue Window When Done Toolbar Item */
 "Shut Down Computer" = "Éteindre l'ordinateur";
 
@@ -499,7 +517,7 @@ Toolbar Start/Stop Item */
 /* Menu Start/Stop Item
 Queue -> start/stop menu
 Toolbar Start/Stop Item */
-"Start Encoding" = "Démarrage l'encodage";
+"Start Encoding" = "Démarrer l'encodage";
 
 /* Toolbar Start/Stop Item */
 "Start Queue" = "Démarrer la file d'attente";
@@ -573,6 +591,9 @@ Rename preset window -> name alert message */
 
 /* Preferences -> Output Name Token */
 "Title" = "Titre";
+
+/* Queue Window Details Toolbar Item */
+"Toggle details sidebar" = "Afficher/Masquer la barre latérale des détails";
 
 /* HBLanguage -> Unknown language */
 "Unknown" = "Inconnu";

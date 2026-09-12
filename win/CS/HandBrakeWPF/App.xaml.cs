@@ -28,6 +28,7 @@ namespace HandBrakeWPF
     using HandBrakeWPF.Model;
     using HandBrakeWPF.Services.Interfaces;
     using HandBrakeWPF.Startup;
+    using HandBrakeWPF.Themes;
     using HandBrakeWPF.Utilities;
     using HandBrakeWPF.ViewModels;
     using HandBrakeWPF.ViewModels.Interfaces;
@@ -59,14 +60,14 @@ namespace HandBrakeWPF
 
         private void Init(StartupEventArgs e)
         {
-            if (!File.Exists("hb.dll") && !File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hb.dll")))
+            if (!SystemInfo.IsArmDevice && !File.Exists("hb.dll") && !File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hb.dll")))
             {
                 MessageBox.Show("hb.dll file not found. Application will not run correctly without this. Please re-install HandBrake.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.Shutdown();
                 Environment.Exit(-1);
                 return;
             }
-
+            
             // We don't support Windows earlier than 10.
             if (!SystemInfo.IsWindows10OrLater())
             {
@@ -176,54 +177,7 @@ namespace HandBrakeWPF
             // Increment the counter so we can change startup behavior for the above warning and update check question.
             userSettingService.SetUserSetting(UserSettingConstants.RunCounter, runCounter + 1); // Only display once.
 
-            // App Theme
-            DarkThemeMode useDarkTheme = (DarkThemeMode)userSettingService.GetUserSetting<int>(UserSettingConstants.DarkThemeMode);
-       
-            Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Generic.xaml", UriKind.Relative) });
-            bool themed = false;
-            if (SystemParameters.HighContrast || !Portable.IsThemeEnabled())
-            {
-                Application.Current.Resources["Ui.Light"] = new SolidColorBrush(SystemColors.HighlightTextColor);
-                Application.Current.Resources["Ui.ContrastLight"] = new SolidColorBrush(SystemColors.ActiveBorderBrush.Color);
-                useDarkTheme = DarkThemeMode.None;
-            }
-
-            switch (useDarkTheme)
-            {
-                case DarkThemeMode.System:
-                    if (SystemInfo.IsAppsUsingDarkTheme())
-                    {
-                        Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Dark.xaml", UriKind.Relative) });
-                    }
-                    else
-                    {
-                        Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Light.xaml", UriKind.Relative) });
-                    }
-
-                    themed = true;
-                    break;
-                case DarkThemeMode.Dark:
-                    Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Dark.xaml", UriKind.Relative) });
-                    themed = true;
-                    break;
-                case DarkThemeMode.Light:
-                    Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Themes/Light.xaml", UriKind.Relative) });
-                    themed = true;
-                    break;
-
-                case DarkThemeMode.None:
-                    Application.Current.Resources["Ui.Light"] = new SolidColorBrush(SystemColors.HighlightTextColor);
-                    Application.Current.Resources["Ui.ContrastLight"] = new SolidColorBrush(SystemColors.ActiveBorderBrush.Color);
-                    themed = false;
-                    break;
-            }
-
-            Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Views/Styles/Styles.xaml", UriKind.Relative) });
-
-            if (themed)
-            {
-                Application.Current.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("Views/Styles/ThemedStyles.xaml", UriKind.Relative) });
-            }
+            ThemeLoader.LoadAppTheme(userSettingService);
 
             // NO-Hardware Mode
             bool noHardware = e.Args.Any(f => f.Equals("--no-hardware")) || (Portable.IsPortable() && !Portable.IsHardwareEnabled());
@@ -279,7 +233,7 @@ namespace HandBrakeWPF
                 {
                     GeneralApplicationException exception = new GeneralApplicationException(
                         "A file appears to be missing.",
-                        "Try re-installing Microsoft .NET 8 Desktop Runtime",
+                        "Try re-installing Microsoft .NET 10 Desktop Runtime",
                         (Exception)e.ExceptionObject);
                     this.ShowError(exception);
                 }
@@ -304,7 +258,7 @@ namespace HandBrakeWPF
         {
             if (e.Exception.GetType() == typeof(FileNotFoundException))
             {
-                GeneralApplicationException exception = new GeneralApplicationException("A file appears to be missing.", "Try re-installing Microsoft .NET 8 Desktop Runtime", e.Exception);
+                GeneralApplicationException exception = new GeneralApplicationException("A file appears to be missing.", "Try re-installing Microsoft .NET 10 Desktop Runtime", e.Exception);
                 this.ShowError(exception);
             }
             else if (e.Exception.GetType() == typeof(GeneralApplicationException))

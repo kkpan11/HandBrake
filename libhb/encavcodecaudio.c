@@ -1,6 +1,6 @@
 /* encavcodecaudio.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -13,11 +13,9 @@
 
 struct hb_work_private_s
 {
-    hb_job_t       * job;
     AVCodecContext * context;
     AVPacket       * pkt;
 
-    int              out_discrete_channels;
     int              samples_per_frame;
     unsigned long    max_output_bytes;
     unsigned long    input_samples;
@@ -51,7 +49,6 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
 
     hb_work_private_t *pv = calloc(1, sizeof(hb_work_private_t));
     w->private_data       = pv;
-    pv->job               = job;
     pv->list              = hb_list_init();
     pv->last_pts          = AV_NOPTS_VALUE;
     pv->pkt               = av_packet_alloc();
@@ -64,12 +61,12 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
 
     // channel count, layout and matrix encoding
     int matrix_encoding;
-    uint64_t in_channel_layout   = hb_ff_mixdown_xlat(audio->config.out.mixdown,
-                                                      &matrix_encoding);
-    uint64_t out_channel_layout  = hb_ff_mixdown_xlat(audio->config.out.mixdown,
-                                                      &matrix_encoding);
-    pv->out_discrete_channels =
-        hb_mixdown_get_discrete_channel_count(audio->config.out.mixdown);
+    AVChannelLayout in_ch_layout = {0}, out_ch_layout = {0};
+
+    av_channel_layout_copy(&in_ch_layout, audio->config.out.ch_layout);
+    av_channel_layout_copy(&out_ch_layout, audio->config.out.ch_layout);
+
+    hb_ff_mixdown_xlat(audio->config.out.mixdown, &matrix_encoding);
 
     // default settings and options
     AVDictionary *av_opts          = NULL;
@@ -108,19 +105,23 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
                     profile = AV_PROFILE_AAC_LOW;
                     break;
             }
-            // FFmpeg's libfdk-aac wrapper expects back channels for 5.1
-            // audio, and will error out unless we translate the layout
-            if (in_channel_layout == AV_CH_LAYOUT_5POINT1)
-                out_channel_layout  = AV_CH_LAYOUT_5POINT1_BACK;
+            // FFmpeg's libfdk-aac wrapper expects back channels for 5.1, 6.1
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_6POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_6POINT1_BACK);
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1_BACK);
             break;
 
         case HB_ACODEC_FFAAC:
             codec_name = "aac";
-            // Use 5.1 back for AAC because 5.1 side uses a
-            // not-so-universally supported feature to signal the
-            // non-standard layout
-            if (in_channel_layout == AV_CH_LAYOUT_5POINT1)
-                out_channel_layout  = AV_CH_LAYOUT_5POINT1_BACK;
+            // use back channels for AAC otherwise the encoder will signal the
+            // layout via a PCE instead of a standard channel configuration index
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_6POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_6POINT1_BACK);
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1_BACK);
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_2_2) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_QUAD);
             break;
 
         case HB_ACODEC_FFALAC:
@@ -137,12 +138,12 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
                     bits_per_raw_sample = 16;
                     break;
             }
-            if (in_channel_layout == AV_CH_LAYOUT_5POINT1)
-                out_channel_layout  = AV_CH_LAYOUT_5POINT1_BACK;
-            if (in_channel_layout == AV_CH_LAYOUT_6POINT1)
-                out_channel_layout  = AV_CH_LAYOUT_6POINT1_BACK;
-            if (in_channel_layout == AV_CH_LAYOUT_7POINT1)
-                out_channel_layout  = AV_CH_LAYOUT_7POINT1_WIDE_BACK;
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1_BACK);
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_6POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_6POINT1_BACK);
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_7POINT1_WIDE) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_7POINT1_WIDE_BACK);
             break;
 
         case HB_ACODEC_FFFLAC:
@@ -161,6 +162,23 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
             }
             break;
 
+        case HB_ACODEC_FFPCM16:
+        case HB_ACODEC_FFPCM24:
+            switch (audio->config.out.codec)
+            {
+                case HB_ACODEC_FFPCM24:
+                    codec_name          = "pcm_s24le";
+                    sample_fmt          = AV_SAMPLE_FMT_S32;
+                    bits_per_raw_sample = 24;
+                    break;
+                default:
+                    codec_name          = "pcm_s16le";
+                    sample_fmt          = AV_SAMPLE_FMT_S16;
+                    bits_per_raw_sample = 16;
+                    break;
+            }
+            break;
+
         case HB_ACODEC_FFTRUEHD:
             codec_id = AV_CODEC_ID_TRUEHD;
             break;
@@ -173,9 +191,11 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
             codec_name = "libopus";
             // FFmpeg's libopus wrapper expects back channels for 5.1
             // audio, and will error out unless we translate the layout
-            if (in_channel_layout == AV_CH_LAYOUT_5POINT1)
-                out_channel_layout  = AV_CH_LAYOUT_5POINT1_BACK;
-            if (hb_layout_get_discrete_channel_count(in_channel_layout) > 2)
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1_BACK);
+            if (av_channel_layout_compare(&in_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_2_2) == 0)
+                av_channel_layout_copy(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_QUAD);
+            if (out_ch_layout.nb_channels > 2)
                 av_dict_set(&av_opts, "mapping_family", "1", 0);
             break;
 
@@ -205,18 +225,12 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
         }
     }
 
-    AVChannelLayout in_ch_layout;
-    AVChannelLayout out_ch_layout;
-
-    av_channel_layout_from_mask(&in_ch_layout, in_channel_layout);
-    av_channel_layout_from_mask(&out_ch_layout, out_channel_layout);
-
     // allocate the context and apply the settings
     context                      = avcodec_alloc_context3(codec);
     hb_ff_set_sample_fmt(context, codec, sample_fmt);
     context->bits_per_raw_sample = bits_per_raw_sample;
     context->profile             = profile;
-    context->ch_layout           = out_ch_layout;
+    av_channel_layout_copy(&context->ch_layout, &out_ch_layout);
     context->sample_rate         = audio->config.out.samplerate;
     context->time_base           = (AVRational){1, 90000};
 
@@ -268,17 +282,25 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
     pv->context           = context;
     audio->config.out.samples_per_frame =
     pv->samples_per_frame = context->frame_size;
-    pv->input_samples     = context->frame_size * context->ch_layout.nb_channels;
+    // PCM encoders report frame_size = 0, meaning they accept any size
+    // Use a default frame size for these encoders
+    if (pv->samples_per_frame == 0)
+    {
+        audio->config.out.samples_per_frame =
+        pv->samples_per_frame = 1024;
+    }
+    pv->input_samples     = pv->samples_per_frame * context->ch_layout.nb_channels;
     pv->input_buf         = malloc(pv->input_samples * sizeof(float));
     // Some encoders in libav (e.g. fdk-aac) fail if the output buffer
     // size is not some minimum value.  8K seems to be enough :(
-    pv->max_output_bytes  = MAX(AV_INPUT_BUFFER_MIN_SIZE,
+    pv->max_output_bytes  = MAX(16384,
                                 (pv->input_samples *
                                  av_get_bytes_per_sample(context->sample_fmt)));
 
     int needs_resample = context->sample_fmt != AV_SAMPLE_FMT_FLT;
     int needs_remap    = av_channel_layout_compare(&in_ch_layout, &out_ch_layout) &&
-                          out_channel_layout != AV_CH_LAYOUT_5POINT1_BACK;
+                         av_channel_layout_compare(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_QUAD) &&
+                         av_channel_layout_compare(&out_ch_layout, &(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1_BACK);
 
     // sample_fmt or remap conversion
     if (needs_resample || needs_remap)
@@ -302,7 +324,8 @@ static int encavcodecaInit(hb_work_object_t *w, hb_job_t *job)
                        context->sample_rate, 0);
         av_opt_set_int(pv->swresample, "out_sample_rate",
                        context->sample_rate, 0);
-        if (hb_audio_dither_is_supported(audio->config.out.codec,
+        if (needs_resample && // not required for remap-only
+            hb_audio_dither_is_supported(audio->config.out.codec,
                                          audio->config.in.sample_bit_depth))
         {
             // dithering needs the sample rate
@@ -447,7 +470,6 @@ static void get_packets( hb_work_object_t * w, hb_buffer_list_t * list )
 static void Encode(hb_work_object_t *w, hb_buffer_list_t *list)
 {
     hb_work_private_t * pv = w->private_data;
-    hb_audio_t        * audio = w->audio;
     uint64_t            pts, pos;
 
     while (hb_list_bytes(pv->list) >= pv->input_samples * sizeof(float))
@@ -488,8 +510,8 @@ static void Encode(hb_work_object_t *w, hb_buffer_list_t *list)
         }
 
         frame.pts = pts + (90000LL * pos / (sizeof(float) *
-                                          pv->out_discrete_channels *
-                                          audio->config.out.samplerate));
+                                            pv->context->ch_layout.nb_channels *
+                                            pv->context->sample_rate));
 
         frame.pts = av_rescale_q(frame.pts, (AVRational){1, 90000},
                                  pv->context->time_base);

@@ -9,6 +9,7 @@
 #import "HBJob.h"
 #import "HBCodingUtilities.h"
 #import "HBTitle.h"
+#import "HBAudioFilters.h"
 #import "handbrake/handbrake.h"
 
 @interface HBAudioTrack ()
@@ -28,6 +29,7 @@
         _sampleRate = 0;
         _bitRate = 160;
         _mixdown = HB_AMIXDOWN_STEREO;
+        _filters = [[HBAudioFilters alloc] init];
     }
     return self;
 }
@@ -43,7 +45,7 @@
         _dataSource = dataSource;
         _sourceTrackIdx = index;
         _container = container;
-        self.title = [dataSource sourceTrackAtIndex:_sourceTrackIdx].title;
+        _filters = [[HBAudioFilters alloc] init];
 
         [self validateSettings];
 
@@ -90,9 +92,10 @@
 
     if (!(self.undo.isUndoing || self.undo.isRedoing))
     {
-        self.title = [self.dataSource sourceTrackAtIndex:_sourceTrackIdx].title;
-
         [self validateSettings];
+
+        self.title = [self.dataSource defaultTitleForTrackAtIndex:_sourceTrackIdx
+                                                          mixdown:_mixdown];
 
         if (oldIdx != sourceTrackIdx)
         {
@@ -132,6 +135,8 @@
         self.mixdown = [self sanitizeMixdownValue:self.mixdown];
         self.sampleRate = [self sanitizeSamplerateValue:self.sampleRate];
         self.bitRate = [self sanitizeBitrateValue:self.bitRate];
+        self.title = [self sanitizeTrackNameValue:self.title];
+        [self sanitizeFilters:encoder];
         [self.delegate encoderChanged];
         self.validating = NO;
     }
@@ -149,6 +154,7 @@
     {
         self.validating = YES;
         self.bitRate = [self sanitizeBitrateValue:self.bitRate];
+        self.title = [self sanitizeTrackNameValue:self.title];
         self.validating = NO;
     }
 }
@@ -219,18 +225,17 @@
 
 - (void)setTitle:(NSString *)title
 {
-    if ([title isEqualToString:@"Mono"] ||
-        [title isEqualToString:@"Stereo"] ||
-        [title isEqualToString:@"Surround"])
-    {
-        title = nil;
-    }
-
     if (title != _title)
     {
         [[self.undo prepareWithInvocationTarget:self] setTitle:_title];
     }
     _title = title;
+}
+
+- (void)setUndo:(NSUndoManager *)undo
+{
+    _undo = undo;
+    self.filters.undo = undo;
 }
 
 #pragma mark - Validation
@@ -271,11 +276,11 @@
 - (int)sanitizeMixdownValue:(int)proposedMixdown
 {
     HBTitleAudioTrack *sourceTrack = [_dataSource sourceTrackAtIndex:_sourceTrackIdx];
-    uint64_t channelLayout = sourceTrack.channelLayout;
+    const char *channelLayout = sourceTrack.chLayout.UTF8String;
 
-    if (!hb_mixdown_is_supported(proposedMixdown, self.encoder, channelLayout))
+    if (channelLayout && !hb_mixdown_is_supported_s(proposedMixdown, self.encoder, channelLayout))
     {
-        return hb_mixdown_get_default(self.encoder, channelLayout);
+        return hb_mixdown_get_default_s(self.encoder, channelLayout);
     }
     return proposedMixdown;
 }
@@ -311,6 +316,27 @@
     else
     {
         return hb_audio_bitrate_get_best(self.encoder, proposedBitrate, sampleRate, self.mixdown);
+    }
+}
+
+- (NSString *)sanitizeTrackNameValue:(NSString *)proposedTrackName
+{
+    if ([proposedTrackName isEqualToString:@"Mono"]   ||
+        [proposedTrackName isEqualToString:@"Stereo"] ||
+        [proposedTrackName isEqualToString:@"Surround"])
+    {
+        return [self.dataSource defaultTitleForTrackAtIndex:_sourceTrackIdx
+                                                        mixdown:_mixdown];
+    }
+
+    return proposedTrackName;
+}
+
+- (void)sanitizeFilters:(int)encoder
+{
+    if (encoder & HB_ACODEC_PASS_FLAG)
+    {
+        [self.filters removeAll];
     }
 }
 
@@ -352,15 +378,18 @@
     NSMutableArray<NSString *> *mixdowns = [[NSMutableArray alloc] init];
 
     HBTitleAudioTrack *sourceTrack = [_dataSource sourceTrackAtIndex:_sourceTrackIdx];
-    uint64_t channelLayout = sourceTrack.channelLayout;
+    const char *channelLayout = sourceTrack.chLayout.UTF8String;
 
-    for (const hb_mixdown_t *mixdown = hb_mixdown_get_next(NULL);
-         mixdown != NULL;
-         mixdown  = hb_mixdown_get_next(mixdown))
+    if (channelLayout)
     {
-        if (hb_mixdown_is_supported(mixdown->amixdown, self.encoder, channelLayout))
+        for (const hb_mixdown_t *mixdown = hb_mixdown_get_next(NULL);
+             mixdown != NULL;
+             mixdown  = hb_mixdown_get_next(mixdown))
         {
-            [mixdowns addObject:@(mixdown->name)];
+            if (hb_mixdown_is_supported_s(mixdown->amixdown, self.encoder, channelLayout))
+            {
+                [mixdowns addObject:@(mixdown->name)];
+            }
         }
     }
     return mixdowns;
@@ -540,6 +569,7 @@
 
         copy->_gain = _gain;
         copy->_drc = _drc;
+        copy->_filters = [_filters copy];
 
         copy->_title = [_title copy];
     }
@@ -568,6 +598,7 @@
 
     encodeDouble(_gain);
     encodeDouble(_drc);
+    encodeObject(_filters);
 
     encodeObject(_title);
 }
@@ -577,7 +608,7 @@
     self = [super init];
 
     decodeInteger(_sourceTrackIdx); if (_sourceTrackIdx < 0) { goto fail; }
-    decodeInt(_container); if (_container != HB_MUX_MP4 && _container != HB_MUX_MKV && _container != HB_MUX_WEBM) { goto fail; }
+    decodeContainerOrFail(_container);
 
     decodeInt(_encoder); if (_encoder < 0) { goto fail; }
     decodeInt(_mixdown); if (_mixdown < 0) { goto fail; }
@@ -586,6 +617,11 @@
 
     decodeDouble(_gain);
     decodeDouble(_drc);
+    decodeObject(_filters, HBAudioFilters);
+    if (_filters == nil)
+    {
+        _filters = [[HBAudioFilters alloc] init];
+    }
 
     decodeObject(_title, NSString);
 

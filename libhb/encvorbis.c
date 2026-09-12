@@ -1,6 +1,6 @@
 /* encvorbis.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -32,7 +32,6 @@ hb_work_object_t hb_encvorbis =
 struct hb_work_private_s
 {
     float     *buf;
-    hb_job_t  *job;
     hb_list_t *list;
 
     vorbis_dsp_state vd;
@@ -58,14 +57,12 @@ int encvorbisInit(hb_work_object_t *w, hb_job_t *job)
     }
     hb_audio_t *audio = w->audio;
     w->private_data = pv;
-    pv->job = job;
 
     hb_log("encvorbis: opening libvorbis");
 
     vorbis_info_init(&pv->vi);
 
-    pv->out_discrete_channels =
-        hb_mixdown_get_discrete_channel_count(audio->config.out.mixdown);
+    pv->out_discrete_channels = audio->config.out.ch_layout->nb_channels;
 
     if (audio->config.out.bitrate > 0)
     {
@@ -133,10 +130,14 @@ int encvorbisInit(hb_work_object_t *w, hb_job_t *job)
     pv->list = hb_list_init();
 
     // channel remapping
-    uint64_t layout = hb_ff_mixdown_xlat(audio->config.out.mixdown, NULL);
-    hb_audio_remap_build_table(&hb_vorbis_chan_map,
-                               audio->config.in.channel_map, layout,
+    AVChannelLayout out_layout = {0};
+    hb_audio_remap_map_channel_layout(&hb_vorbis_chan_map, &out_layout, audio->config.out.ch_layout);
+
+    hb_audio_remap_build_table(&out_layout,
+                               audio->config.out.ch_layout,
                                pv->remap_table);
+
+    av_channel_layout_uninit(&out_layout);
 
     return 0;
 }

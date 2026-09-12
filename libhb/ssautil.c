@@ -1,6 +1,6 @@
 /* ssautil.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -356,7 +356,7 @@ static char ** get_fields(char * line, int last)
     {
         result[ii] = get_field(&pos);
     }
-    result[ii] = strdup(pos);
+    result[ii] = pos != NULL ? strdup(pos) : NULL;
 
     return result;
 }
@@ -867,6 +867,11 @@ void hb_muxmp4_process_subtitle_style(
     }
     while (ssa_text[in_pos] != '\0')
     {
+        if (ctx->style_atom_count > INT16_MAX)
+        {
+            goto fail;
+        }
+
         text = ssa_to_text(ssa_text + in_pos, &consumed, ctx->in_style);
         if (text == NULL)
             break;

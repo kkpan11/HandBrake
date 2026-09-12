@@ -159,7 +159,6 @@
 
     self.window.contentViewController = _splitViewController;
     self.window.frameAutosaveName = @"HBQueueWindowFrameAutosave";
-    [self.window setFrameFromString:@"HBQueueWindowFrameAutosave"];
 
     // Set up observers
     [NSNotificationCenter.defaultCenter addObserverForName:HBQueueDidChangeStateNotification object:_queue queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification * _Nonnull note) {
@@ -226,8 +225,7 @@
             return self.queue.canEncode;
         }
     }
-
-    if (action == @selector(togglePauseResume:))
+    else if (action == @selector(togglePauseResume:))
     {
         if (self.queue.canPause)
         {
@@ -237,21 +235,30 @@
         {
             menuItem.title = NSLocalizedString(@"Resume Encoding", @"Queue -> pause/resume men");
         }
-
         return self.queue.canPause || self.queue.canResume;
     }
-
-    if (action == @selector(removeAll:) || action == @selector(resetAll:))
+    else if (action == @selector(toggleDetails:))
+    {
+        NSSplitViewItem *detailsItem = self.splitViewController.splitViewItems[1];
+        if (detailsItem.isCollapsed)
+        {
+            menuItem.title = NSLocalizedString(@"Show Sidebar", @"Queue -> sidebar menu");
+        }
+        else
+        {
+            menuItem.title = NSLocalizedString(@"Hide Sidebar", @"Queue -> sidebar menu");
+        }
+        return YES;
+    }
+    else if (action == @selector(removeAll:) || action == @selector(resetAll:))
     {
         return self.queue.items.count > 0;
     }
-
-    if (action == @selector(resetFailed:))
+    else if (action == @selector(resetFailed:))
     {
         return self.queue.failedItemsCount > 0;
     }
-
-    if (action == @selector(removeCompleted:))
+    else if (action == @selector(removeCompleted:))
     {
         return self.queue.completedItemsCount > 0;
     }
@@ -265,13 +272,11 @@
     {
         return self.queue.isEncoding || self.queue.canEncode;
     }
-
-    if (action == @selector(togglePauseResume:))
+    else if (action == @selector(togglePauseResume:))
     {
         return self.queue.canPause || self.queue.canResume;
     }
-
-    if (action == @selector(toggleDetails:) ||
+    else if (action == @selector(toggleDetails:) ||
         action == @selector(toggleQuickLook:))
     {
         return YES;
@@ -423,6 +428,13 @@ NSString * const HBQueueItemNotificationShowCategory = @"HBQueueItemNotification
     }
 }
 
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       willPresentNotification:(UNNotification *)notification
+         withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler API_AVAILABLE(macos(10.15))
+{
+    completionHandler(UNNotificationPresentationOptionSound);
+}
+
 - (void)userNotificationCenter:(NSUserNotificationCenter *)center didActivateNotification:(NSUserNotification *)notification
 {
     // Show the file in Finder when a done notification is clicked
@@ -445,7 +457,6 @@ NSString * const HBQueueItemNotificationShowCategory = @"HBQueueItemNotification
         notification.title = title;
         notification.body = description;
         notification.sound = playSound ? UNNotificationSound.defaultSound : nil;
-
         if (fileURL)
         {
             notification.categoryIdentifier = HBQueueItemNotificationShowCategory;

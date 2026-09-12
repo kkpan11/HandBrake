@@ -9,91 +9,103 @@ concurrency:
 jobs:
   build_mingw_arm:
     name: CLI / LibHB (ARM)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
+    - uses: actions/checkout@v7
+
+    - name: Cargo-C Toolchain Cache
+      id: windows-arm-cargo-c-toolchain
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.cargo/bin/cargo-capi
+          ~/.cargo/bin/cargo-cbuild
+          ~/.cargo/bin/cargo-cinstall
+        key: ${{ runner.os }}-${{ runner.arch }}-windows-arm-cargo-c-toolchain
 
     - name: Environment Setup
       run: |
-        sudo apt-get install automake autoconf build-essential libtool libtool-bin make nasm patch tar yasm zlib1g-dev ninja-build gzip pax
-        sudo pip3 install meson
+        sudo apt-get install automake autoconf build-essential libtool libtool-bin make meson nasm patch tar yasm zlib1g-dev ninja-build gzip pax
+        rustup target add aarch64-pc-windows-gnullvm
 
     - name: Setup Toolchain
       run: |
-        wget https://github.com/HandBrake/HandBrake-toolchains/releases/download/1.0/llvm-mingw-20250319-msvcrt-ubuntu-20.04-x86_64.tar.xz
-        SHA=$(sha1sum llvm-mingw-20250319-msvcrt-ubuntu-20.04-x86_64.tar.xz)
-        EXPECTED="3a9b127c62220c7bf4beec1638d5608d350dc452  llvm-mingw-20250319-msvcrt-ubuntu-20.04-x86_64.tar.xz"
+        wget https://github.com/HandBrake/HandBrake-toolchains/releases/download/1.0/llvm-mingw-20260324-ucrt-ubuntu-22.04-x86_64.tar.xz
+        SHA=$(sha1sum llvm-mingw-20260324-ucrt-ubuntu-22.04-x86_64.tar.xz)
+        EXPECTED="efd3a915c7e7a1ee1a66b0ecddebc0a1b0251309  llvm-mingw-20260324-ucrt-ubuntu-22.04-x86_64.tar.xz"
         if [ "$SHA" == "$EXPECTED" ];
         then
             echo "Toolchain Verified. Extracting ..."
             mkdir toolchains
-            mv llvm-mingw-20250319-msvcrt-ubuntu-20.04-x86_64.tar.xz toolchains
+            mv llvm-mingw-20260324-ucrt-ubuntu-22.04-x86_64.tar.xz toolchains
             cd toolchains
-            tar xvf llvm-mingw-20250319-msvcrt-ubuntu-20.04-x86_64.tar.xz
+            tar xvf llvm-mingw-20260324-ucrt-ubuntu-22.04-x86_64.tar.xz
         else
             echo "Toolchain Verification FAILED. Exiting!"
             return -1
         fi
 
+    - name: Setup Cargo-C Toolchain
+      if: steps.windows-arm-cargo-c-toolchain.outputs.cache-hit != 'true'
+      run: |
+        cargo install cargo-c
+
     - name: Build CLI and LibHB
       run: |
-        export PATH="/home/runner/work/HandBrake/HandBrake/toolchains/llvm-mingw-20250319-msvcrt-ubuntu-20.04-x86_64/bin:${PATH}"
+        export PATH="/home/runner/work/HandBrake/HandBrake/toolchains/llvm-mingw-20260324-ucrt-ubuntu-22.04-x86_64/bin:${PATH}"
         export PATH=/usr/bin:$PATH
-        ./configure --cross=aarch64-w64-mingw32 --enable-mf --launch-jobs=0 --launch
+        ./configure --cross=aarch64-w64-mingw32 --launch-jobs=0 --launch
         cd build
         make pkg.create.zip
         cd libhb
         mv hb.dll hb_a64.dll
-        
 
     - name: Upload HandBrakeCLI
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrakeCLI_ARM64
         path: ./build/HandBrakeCLI.exe
 
     - name: Upload LibHB
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: LibHandBrake_ARM64
         path: ./build/libhb/hb_a64.dll
 
   build_mingw:
     name: CLI / LibHB
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Cargo-C Toolchain Cache
       id: windows-cargo-c-toolchain
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           ~/.cargo/bin/cargo-capi
           ~/.cargo/bin/cargo-cbuild
           ~/.cargo/bin/cargo-cinstall
-        key: windows-cargo-c-toolchain
+        key: ${{ runner.os }}-${{ runner.arch }}-windows-cargo-c-toolchain
 
     - name: Setup Environment
       run: |
-        sudo apt-get install automake autoconf build-essential libtool libtool-bin make nasm patch tar yasm zlib1g-dev ninja-build gzip pax libssl-dev
-        sudo pip3 install meson
+        sudo apt-get install automake autoconf build-essential libtool libtool-bin make meson nasm patch tar yasm zlib1g-dev ninja-build gzip pax libssl-dev
         rustup target add x86_64-pc-windows-gnu
 
     - name: Setup Toolchain
       run: |
-        wget https://github.com/bradleysepos/mingw-w64-build/releases/download/10.0.0/mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64.tar.gz
-        SHA=$(sha1sum mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64.tar.gz)
-        EXPECTED="f7250d140a72bdfdda2d4cd01d84e9a3938132b1  mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64.tar.gz"
+        wget https://github.com/HandBrake/HandBrake-toolchains/releases/download/1.0/mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64.tar.gz
+        SHA=$(sha1sum mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64.tar.gz)
+        EXPECTED="43abbe33e79d273da2cd102fe45e196b56b5bc92  mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64.tar.gz"
         if [ "$SHA" == "$EXPECTED" ];
         then
             echo "Toolchain Verified. Extracting ..."
             mkdir toolchains
-            mv mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64.tar.gz toolchains
+            mv mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64.tar.gz toolchains
             cd toolchains
-            tar xvf mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64.tar.gz
-            cd mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64/mingw-w64-x86_64/
+            tar xvf mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64.tar.gz
+            cd mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64/mingw-w64-x86_64/
             pwd
         else
             echo "Toolchain Verification FAILED. Exiting!"
@@ -107,20 +119,20 @@ jobs:
 
     - name: Build CLI and LibHB
       run: |
-        export PATH="/home/runner/work/HandBrake/HandBrake/toolchains/mingw-w64-toolchain-10.0.0-msvcrt-linux-x86_64/mingw-w64-x86_64/bin:${PATH}"
+        export PATH="/home/runner/work/HandBrake/HandBrake/toolchains/mingw-w64-toolchain-12.0.0-ucrt-linux-x86_64/mingw-w64-x86_64/bin:${PATH}"
         export PATH=/usr/bin:$PATH
         ./configure --cross=x86_64-w64-mingw32 --enable-qsv --enable-vce --enable-nvenc --enable-nvdec --launch-jobs=0 --launch
         cd build
         make pkg.create.zip
 
     - name: Upload HandBrakeCLI
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrakeCLI
         path: ./build/HandBrakeCLI.exe
 
     - name: Upload LibHB
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: LibHandBrake
         path: ./build/libhb/hb.dll
@@ -133,14 +145,14 @@ jobs:
       SigningCertificate: ${{ secrets.HandBrakeTeam_SignFile }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Download LibHandBrake
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
        name: LibHandBrake
        path: win/CS/HandBrakeWPF/bin/publish
-      
+
     - name: Import the Signing Cert
       run: |
         $ErrorView = "NormalView"
@@ -153,10 +165,19 @@ jobs:
           cp $certificatePath win\cs\
         }
 
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: Add NSIS to PATH
+      shell: pwsh
+      run: Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\NSIS"
+
     - name: Build Windows GUI
+      shell: pwsh
       run: |
-        $env:Path += ";C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin"
-        msbuild win\cs\build.xml /t:x64 /p:PfxFile=$env:SigningCertificate /p:PfxPwd=${{ secrets.HandBrakeTeam_pfx_pwd }} /p:SignTimestampServer=http://time.certum.pl/
+        dotnet msbuild win\cs\build.xml /t:x64 /p:PfxFile=$env:SigningCertificate /p:PfxPwd=${{ secrets.HandBrakeTeam_pfx_pwd }} /p:SignTimestampServer=http://time.certum.pl/
 
     - name: Prepare Package
       run: |
@@ -183,19 +204,19 @@ jobs:
         cd ../../../../
         dir
       shell: cmd
-              
+
     - name: Upload HandBrake Installer
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrake-Win_GUI-x64
         path: win/CS/HandBrakeWPF/bin/HandBrake/HandBrake*.exe
 
     - name: Upload HandBrake ZIP
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrake-Win_GUI-x64-Zip
         path: win/CS/HandBrakeWPF/bin/*-Win_GUI.zip
-        
+
   build_gui_arm:
     name: Windows UI ARM
     runs-on: windows-2022
@@ -204,10 +225,10 @@ jobs:
       SigningCertificate: ${{ secrets.HandBrakeTeam_SignFile }}
 
     steps:
-    - uses: actions/checkout@v4
-       
+    - uses: actions/checkout@v7
+
     - name: Download LibHandBrake_ARM64
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
        name: LibHandBrake_ARM64
        path: win/CS/HandBrakeWPF/bin/publish
@@ -224,11 +245,20 @@ jobs:
           cp $certificatePath win\cs\
         }
 
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: Add NSIS to PATH
+      shell: pwsh
+      run: Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files (x86)\NSIS"
+
     - name: Build Windows GUI
+      shell: pwsh
       run: |
-        $env:Path += ";C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin"
-        msbuild win\cs\build.xml /t:arm64 /p:PfxFile=$env:SigningCertificate /p:PfxPwd=${{ secrets.HandBrakeTeam_pfx_pwd }} /p:SignTimestampServer=http://time.certum.pl/
-        
+        dotnet msbuild win\cs\build.xml /t:arm64 /p:PfxFile=$env:SigningCertificate /p:PfxPwd=${{ secrets.HandBrakeTeam_pfx_pwd }} /p:SignTimestampServer=http://time.certum.pl/
+
     - name: Prepare Package
       run: |
         echo "Setting up context"
@@ -254,15 +284,15 @@ jobs:
         cd ../../../../
         dir
       shell: cmd
-              
+
     - name: Upload HandBrake Installer
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrake-Win_GUI-ARM64
         path: win/CS/HandBrakeWPF/bin/HandBrake/HandBrake*.exe
 
     - name: Upload HandBrake ZIP
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrake-Win_GUI-ARM64-Zip
         path: win/CS/HandBrakeWPF/bin/*-Win_GUI.zip

@@ -1,6 +1,6 @@
 /* comb_detect.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -131,6 +131,7 @@ hb_filter_object_t hb_filter_comb_detect =
     .id                = HB_FILTER_COMB_DETECT,
     .enforce_order     = 1,
     .name              = "Comb Detect",
+    .short_name        = "combdetect",
     .settings          = NULL,
     .init              = comb_detect_init,
     .work              = comb_detect_work,
@@ -1157,8 +1158,8 @@ static int comb_detect_init(hb_filter_object_t *filter,
     pv->gamma_spatial_threshold6  = 6 * pv->gamma_spatial_threshold;
     pv->spatial_threshold_squared = pv->spatial_threshold * pv->spatial_threshold;
     pv->spatial_threshold6        = 6 * pv->spatial_threshold;
-    pv->comb32detect_min = 10 << (pv->depth - 8);
-    pv->comb32detect_max = 15 << (pv->depth - 8);
+    pv->comb32detect_min = pv->depth >= 8 ? 10 << (pv->depth - 8) : 10;
+    pv->comb32detect_max = pv->depth >= 8 ? 15 << (pv->depth - 8) : 15;
 
     pv->cpu_count = hb_get_cpu_count();
 
@@ -1166,6 +1167,19 @@ static int comb_detect_init(hb_filter_object_t *filter,
     int height = hb_image_height(init->pix_fmt, init->geometry.height, 0);
     // each segment of each plane must begin on an even row.
     pv->segment_height[0] = (height / pv->cpu_count) & ~3;
+    // Make sure segment height should not be smaller than block height
+    // or otherwise the segment is too small to get any performance benefit
+    if (pv->segment_height[0] < pv->block_height)
+    {
+        pv->segment_height[0] = pv->block_height;
+    }
+
+    // Adjust cpu_count to the appropriate value so that it will not use all CPU cores
+    if ((height / pv->segment_height[0]) < pv->cpu_count)
+    {
+        pv->cpu_count = (height + (pv->segment_height[0] -1)) / pv->segment_height[0];
+    }
+
     pv->segment_height[1] = hb_image_height(init->pix_fmt, pv->segment_height[0], 1);
     pv->segment_height[2] = hb_image_height(init->pix_fmt, pv->segment_height[0], 2);
 

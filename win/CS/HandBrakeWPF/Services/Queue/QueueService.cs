@@ -252,6 +252,18 @@ namespace HandBrakeWPF.Services.Queue
             }
         }
 
+        public void ExportJson(string exportPath, IList<QueueTask> jobs)
+        {
+            string json = JsonSerializer.Serialize(jobs, JsonSettings.Options);
+
+            using (var strm = new StreamWriter(exportPath, false))
+            {
+                strm.Write(json);
+                strm.Close();
+                strm.Dispose();
+            }
+        }
+
         public void ImportJson(string path)
         {
             using (StreamReader reader = new StreamReader(path))
@@ -754,11 +766,6 @@ namespace HandBrakeWPF.Services.Queue
                 if (job.TaskToken == Guid.Empty)
                 {
                     return; // Hardware is busy, we'll try again later when another job completes.
-                }
-
-                if (CheckDiskSpace(job))
-                {
-                    return; // Don't start the next job.
                 }
 
                 this.jobIdCounter = this.jobIdCounter + 1;

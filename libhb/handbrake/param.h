@@ -1,6 +1,6 @@
 /* param.h
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -34,6 +34,9 @@ int    hb_validate_filter_string(int filter_id, const char * filter_str);
 
 hb_filter_param_t * hb_filter_param_get_presets(int filter_id);
 hb_filter_param_t * hb_filter_param_get_tunes(int filter_id);
+
+const char * hb_filter_param_get_default_preset(int filter_id);
+const char * hb_filter_param_get_default_tune(int filter_id);
 
 char ** hb_filter_get_keys(int filter_id);
 char ** hb_filter_get_presets_short_name(int filter_id);

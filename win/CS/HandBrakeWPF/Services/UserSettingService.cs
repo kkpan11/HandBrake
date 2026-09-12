@@ -280,7 +280,7 @@ namespace HandBrakeWPF.Services
             defaults.Add(UserSettingConstants.UpdateStatus, false);
             defaults.Add(UserSettingConstants.LastUpdateCheckDate, DateTime.Now.Date.AddDays(-30));
             defaults.Add(UserSettingConstants.DaysBetweenUpdateCheck, 1);
-            defaults.Add(UserSettingConstants.DarkThemeMode, DarkThemeMode.Light);
+            defaults.Add(UserSettingConstants.DarkThemeMode, AppThemeMode.System);
             defaults.Add(UserSettingConstants.ShowPreviewOnSummaryTab, true);
             defaults.Add(UserSettingConstants.MainWindowMinimize, false);
             defaults.Add(UserSettingConstants.ClearCompletedFromQueue, false);
@@ -290,6 +290,7 @@ namespace HandBrakeWPF.Services
             defaults.Add(UserSettingConstants.MediaPlayerPath, @"C:\Program Files\VideoLAN\vlc\vlc.exe");
             defaults.Add(UserSettingConstants.PresetMenuDisplayMode, 0);
             defaults.Add(UserSettingConstants.RightToLeftUi, 0); 
+            defaults.Add(UserSettingConstants.PresetUiType, 1);
             
             // Output Files
             defaults.Add(UserSettingConstants.AutoNaming, true);
@@ -316,11 +317,13 @@ namespace HandBrakeWPF.Services
             // Video
             bool intelDefaultSetting = HandBrakeHardwareEncoderHelper.IsQsvAvailable;
             bool nvidiaDefaultSetting = HandBrakeHardwareEncoderHelper.IsNVEncH264Available;
+            bool amfDefaultSetting = HandBrakeHardwareEncoderHelper.IsAMFDecAvailable;
 
             defaults.Add(UserSettingConstants.EnableQuickSyncDecoding, intelDefaultSetting);
             defaults.Add(UserSettingConstants.EnableQuickSyncHyperEncode, false);
             defaults.Add(UserSettingConstants.UseQSVDecodeForNonQSVEnc, false);
             defaults.Add(UserSettingConstants.EnableNvDecSupport, nvidiaDefaultSetting);
+            defaults.Add(UserSettingConstants.EnableAmfDecSupport, amfDefaultSetting);
             defaults.Add(UserSettingConstants.EnableQuickSyncLowPower, true);
             defaults.Add(UserSettingConstants.EnableDirectXDecoding, SystemInfo.IsArmDevice);
 

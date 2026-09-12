@@ -1,6 +1,6 @@
 /* internal.h
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -14,6 +14,8 @@
 #include "libavutil/pixdesc.h"
 #include "libavutil/frame.h"
 #include "handbrake/project.h"
+
+typedef AVChannelLayout hb_channel_layout_t;
 
 /***********************************************************************
  * common.c
@@ -59,10 +61,6 @@ void hb_job_setup_passes(hb_handle_t *h, hb_job_t *job, hb_list_t *list_pass);
  * that are conditionally used depending on the type of packet.
  */
 typedef struct hb_buffer_s hb_buffer_t;
-
-#if HB_PROJECT_FEATURE_QSV
-#include "handbrake/qsv_libav.h"
-#endif
 
 struct hb_buffer_settings_s
 {
@@ -150,15 +148,6 @@ struct hb_buffer_s
         int           height;
         int           size;
     } plane[4]; // 3 Color components + alpha
-
-#if HB_PROJECT_FEATURE_QSV
-    struct qsv
-    {
-        void               * qsv_atom;
-        hb_qsv_context     * ctx;
-        HBQSVFramesContext * qsv_frames_ctx;
-    } qsv_details;
-#endif
 
     void  *storage;
     enum  { STANDARD, AVFRAME, COREMEDIA } storage_type;
@@ -264,6 +253,28 @@ static inline int hb_image_height(int pix_fmt, int height, int plane)
     return height;
 }
 
+static inline void hb_image_copy_plane(uint8_t *restrict dst, const uint8_t *restrict src,
+                                       const int stride_dst, const int stride_src, const int height)
+{
+    if (src != dst)
+    {
+        if (stride_src == stride_dst)
+        {
+            memcpy(dst, src, stride_dst * height);
+        }
+        else
+        {
+            const int size = stride_src < stride_dst ? ABS(stride_src) : stride_dst;
+            for (int yy = 0; yy < height; yy++)
+            {
+                memcpy(dst, src, size);
+                dst += stride_dst;
+                src += stride_src;
+            }
+        }
+    }
+}
+
 /***********************************************************************
  * Threads: scan.c, work.c, reader.c, muxcommon.c
  **********************************************************************/
@@ -281,7 +292,7 @@ hb_work_object_t * hb_muxer_init( hb_job_t * );
 hb_work_object_t * hb_get_work( hb_handle_t *, int );
 hb_work_object_t * hb_audio_decoder( hb_handle_t *, int );
 hb_work_object_t * hb_audio_encoder( hb_handle_t *, int );
-hb_work_object_t * hb_video_decoder( hb_handle_t *, int, int, void *);
+hb_work_object_t * hb_video_decoder( hb_handle_t *, int, int, void *, hb_hwaccel_t *hw_accel);
 hb_work_object_t * hb_video_encoder( hb_handle_t *, int );
 
 /***********************************************************************
@@ -437,6 +448,8 @@ extern hb_filter_object_t hb_filter_deblock;
 extern hb_filter_object_t hb_filter_denoise;
 extern hb_filter_object_t hb_filter_nlmeans;
 extern hb_filter_object_t hb_filter_chroma_smooth;
+extern hb_filter_object_t hb_filter_bm3d;
+extern hb_filter_object_t hb_filter_deband;
 extern hb_filter_object_t hb_filter_render_sub;
 extern hb_filter_object_t hb_filter_rpu;
 extern hb_filter_object_t hb_filter_crop_scale;
@@ -451,7 +464,7 @@ extern hb_filter_object_t hb_filter_colorspace;
 extern hb_filter_object_t hb_filter_format;
 
 #if defined(__APPLE__)
-extern hb_filter_object_t hb_filter_prefilter_vt;
+extern hb_filter_object_t hb_filter_adapter_vt;
 extern hb_filter_object_t hb_filter_comb_detect_vt;
 extern hb_filter_object_t hb_filter_yadif_vt;
 extern hb_filter_object_t hb_filter_bwdif_vt;
@@ -463,6 +476,10 @@ extern hb_filter_object_t hb_filter_pad_vt;
 extern hb_filter_object_t hb_filter_lapsharp_vt;
 extern hb_filter_object_t hb_filter_unsharp_vt;
 #endif
+
+extern hb_filter_object_t hb_filter_acompressor;
+extern hb_filter_object_t hb_filter_agate;
+extern hb_filter_object_t hb_filter_avfilter_audio;
 
 extern hb_motion_metric_object_t hb_motion_metric;
 extern hb_blend_object_t hb_blend;

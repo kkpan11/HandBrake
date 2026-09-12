@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 HandBrake Team
+# Copyright (C) 2026-2026 HandBrake Team
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 project('handbrake-gtk', 'c', 'cpp',
@@ -9,7 +9,7 @@ project('handbrake-gtk', 'c', 'cpp',
 
 # Minimum versions for dependencies
 glib_min = '>= 2.68'
-gtk_min  = '>= 4.4'
+gtk_min  = '>= 4.6'
 
 cc = meson.get_compiler('c')
 i18n = import('i18n')
@@ -40,7 +40,7 @@ ghb_deps = [
   dependency('libavformat'),
   dependency('libavutil'),
   dependency('libbluray'),
-  dependency('libcpuinfo'),
+  dependency('libudfread'),
   dependency('libswresample'),
   dependency('libswscale'),
   dependency('libturbojpeg'),
@@ -106,8 +106,8 @@ if (cc.has_function('strerror_r'))
   add_project_arguments('-DHAS_STRERROR_R', language: 'c')
 endif
 
-add_project_arguments('-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_4_4',
-'-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_4_4', language: 'c')
+add_project_arguments('-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_4_6',
+'-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_4_6', language: 'c')
 
 compile_args = cc.get_supported_arguments(
   '-Wno-missing-field-initializers',

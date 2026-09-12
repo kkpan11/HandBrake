@@ -19,7 +19,6 @@ namespace HandBrake.Interop.Interop.Json.Encode
         /// </summary>
         public Video()
         {
-            this.QSV = new QSV();
         }
 
         /// <summary>
@@ -46,6 +45,11 @@ namespace HandBrake.Interop.Interop.Json.Encode
         /// Gets or sets a value indicating whether Turbo Analysis Pass. For x264/5
         /// </summary>
         public bool Turbo { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Colour Range
+        /// </summary>
+        public int? ColorRange { get; set; }
 
         /// <summary>
         /// Gets or sets the Colour Matrix Code
@@ -78,13 +82,8 @@ namespace HandBrake.Interop.Interop.Json.Encode
         public string Tune { get; set; }
 
         /// <summary>
-        /// Gets or sets the qsv.
-        /// </summary>
-        public QSV QSV { get; set; }
-
-        /// <summary>
         /// HB_DECODE_SUPPORT constants in common.h
         /// </summary>
-        public int HardwareDecode { get; set; }
+        public uint HardwareDecode { get; set; }
     }
 }

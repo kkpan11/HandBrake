@@ -1,6 +1,6 @@
 /* ports.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -67,6 +67,10 @@
 #if HB_PROJECT_FEATURE_QSV
 #include <libdrm/drm.h>
 #endif
+#endif
+
+#if defined(SYS_LINUX) || defined(SYS_FREEBSD) || defined(SYS_NETBSD) || defined(SYS_OPENBSD)
+#include <sys/utsname.h>
 #endif
 
 #ifdef __APPLE__
@@ -182,6 +186,90 @@ void hb_snooze( int delay )
 #else
     usleep( 1000 * delay );
 #endif
+}
+
+/************************************************************************
+ * Get information about the operating system
+ ************************************************************************/
+static void init_system_info();
+struct
+{
+    const char *name;
+    const char *version;
+    const char *build;
+} hb_system_info;
+
+static void init_system_info()
+{
+    if (hb_system_info.name != NULL)
+    {
+        return;
+    }
+
+#if defined(SYS_DARWIN)
+    char buf[256];
+    size_t buflen = sizeof(buf);
+
+    if (sysctlbyname("kern.osproductversion", &buf, &buflen, NULL, 0) == 0)
+    {
+        hb_system_info.version = strdup(buf);
+    }
+
+    buflen = sizeof(buf);
+    if (sysctlbyname("kern.osversion", &buf, &buflen, NULL, 0) == 0)
+    {
+        hb_system_info.build = strdup(buf);
+    }
+
+    hb_system_info.name = "macOS";
+#elif defined(SYS_LINUX) || defined(SYS_FREEBSD) || defined(SYS_NETBSD) || defined(SYS_OPENBSD)
+    struct utsname uts;
+    if (uname(&uts) == 0)
+    {
+        hb_system_info.name    = strdup(uts.sysname);
+        hb_system_info.version = strdup(uts.release);
+        hb_system_info.build   = strdup(uts.version);
+    }
+#elif defined(SYS_MINGW)
+    NTSYSAPI NTSTATUS RtlGetVersion(PRTL_OSVERSIONINFOW);
+
+    OSVERSIONINFOW vi = {0};
+    vi.dwOSVersionInfoSize = sizeof(vi);
+    char buf[32];
+
+    if (RtlGetVersion(&vi) == 0)
+    {
+        snprintf(buf, sizeof(buf), "%lu.%lu", vi.dwMajorVersion, vi.dwMinorVersion);
+        hb_system_info.version = strdup(buf);
+
+        snprintf(buf, sizeof(buf), "%lu", vi.dwBuildNumber);
+        hb_system_info.build = strdup(buf);
+    }
+
+    hb_system_info.name = "Windows";
+#else
+    hb_system_info.name    = NULL;
+    hb_system_info.version = NULL;
+    hb_system_info.build   = NULL;
+#endif
+}
+
+const char * hb_get_system_name()
+{
+    init_system_info();
+    return hb_system_info.name;
+}
+
+const char * hb_get_system_version()
+{
+    init_system_info();
+    return hb_system_info.version;
+}
+
+const char * hb_get_system_build()
+{
+    init_system_info();
+    return hb_system_info.build;
 }
 
 /************************************************************************
@@ -470,7 +558,7 @@ static int init_cpu_count()
 #endif
 
     cpu_count = MAX( 1, cpu_count );
-    cpu_count = MIN( cpu_count, 64 );
+    cpu_count = MIN( cpu_count, 384 );
 
     return cpu_count;
 }
@@ -555,17 +643,12 @@ void hb_get_user_config_directory( char path[512] )
 
     if ((p = getenv("XDG_CONFIG_HOME")) != NULL)
     {
-        strncpy(path, p, 511);
-        path[511] = 0;
+        snprintf(path, 512, "%s", p);
         return;
     }
     else if ((p = getenv("HOME")) != NULL)
     {
-        strncpy(path, p, 511);
-        path[511] = 0;
-        int len = strlen(path);
-        strncpy(path + len, "/.config", 511 - len - 1);
-        path[511] = 0;
+        snprintf(path, 512, "%s/.config", p);
         return;
     }
 #elif defined( __APPLE__ )
@@ -605,21 +688,43 @@ void hb_get_user_config_filename( char name[1024], char *fmt, ... )
  ***********************************************************************/
 static pthread_once_t tmp_control = PTHREAD_ONCE_INIT;
 static char *tmp_dirname = NULL;
+static const char *tmp_override = NULL;
 
 static void
 hb_init_temporary_directory (void)
 {
-    char *path, *base, *p;
+    char *path = NULL, *base = NULL, *p;
 
 #if defined( SYS_CYGWIN ) || defined( SYS_MINGW )
-    base = malloc(MAX_PATH);
-    int i_size = GetTempPath(MAX_PATH, base);
-    if (i_size <= 0 || i_size >= MAX_PATH)
+    if (tmp_override != NULL && tmp_override[0] != '\0')
     {
-        if (getcwd(base, MAX_PATH) == NULL)
-            strcpy(base, "c:"); /* Bad fallback but ... */
+        base = strdup(tmp_override);
     }
+    else
+    {
+        DWORD i_size = 0;
+        WCHAR wide_base[MAX_PATH + 1];
 
+        i_size = GetTempPathW(MAX_PATH, wide_base);
+        if (i_size > 0 && i_size <= MAX_PATH)
+        {
+            int base_size = WideCharToMultiByte(CP_UTF8, 0, wide_base, -1,
+                                                NULL, 0, 0, NULL);
+            if (base_size)
+            {
+                base = malloc(base_size);
+                WideCharToMultiByte(CP_UTF8, 0, wide_base, -1,
+                                    base, base_size, 0, NULL);
+            }
+        }
+        
+        if (base == NULL)
+        {
+            base = malloc(MAX_PATH + 1);
+            if (getcwd(base, MAX_PATH) == NULL)
+            strcpy(base, "c:"); /* Bad fallback but ... */
+        }
+    }
     /* c:/path/ works like a charm under cygwin(win32?) so use it */
     while ((p = strchr(base, '\\')))
         *p = '/';
@@ -632,8 +737,10 @@ hb_init_temporary_directory (void)
     hb_mkdir(path);
     free(base);
 #else
-    if ((p = getenv("TMPDIR")) != NULL ||
-        (p = getenv("TEMP"))   != NULL)
+    if (tmp_override != NULL && tmp_override[0] != '\0')
+        base = strdup(tmp_override);
+    else if ((p = getenv("TMPDIR")) != NULL ||
+             (p = getenv("TEMP"))   != NULL)
         base = strdup(p);
     else
         base = strdup("/tmp");
@@ -651,6 +758,18 @@ hb_init_temporary_directory (void)
     free(base);
 #endif
     tmp_dirname = path;
+}
+
+/************************************************************************
+ * Sets the location of the temporary directory. This function must be
+ * called before the first use of hb_get_temporary_directory().
+ ***********************************************************************/
+void
+hb_set_temporary_directory (const char *tmp_dir)
+{
+    tmp_override = tmp_dir;
+    pthread_once(&tmp_control, hb_init_temporary_directory);
+    tmp_override = NULL;
 }
 
 const char *
@@ -1377,6 +1496,8 @@ size_t hb_getline(char ** lineptr, size_t * n, FILE * fp)
         if ((p - bufptr) >= (size - 1))
         {
             char * tmp;
+            size_t offset = p - bufptr;
+
             size = size + 128;
             tmp = realloc(bufptr, size);
             if (tmp == NULL)
@@ -1384,7 +1505,7 @@ size_t hb_getline(char ** lineptr, size_t * n, FILE * fp)
                 free(bufptr);
                 return -1;
             }
-            p = tmp + (p - bufptr);
+            p = tmp + offset;
             bufptr = tmp;
         }
         *p++ = c;
@@ -1485,7 +1606,7 @@ static int try_adapter(const char * name, const char * dir,
 static int open_adapter(const char * name, const uint dri_render_node)
 {
     int fd;
-    // If dri_render_node is unknown enumerate across the predifined range of renders
+    // If dri_render_node is unknown enumerate across the predefined range of renders
     if (dri_render_node == 0)
     {
         fd = try_adapter(name, DRI_PATH, DRI_NODE_RENDER,
@@ -1509,7 +1630,7 @@ static int try_va_interface(hb_display_t * hbDisplay,
 {
     if (interface_name != NULL)
     {
-        setenv("LIBVA_DRIVER_NAME", interface_name, 1);
+        vaSetDriverName(hbDisplay->vaDisplay, (char *) interface_name);
     }
 
     hbDisplay->vaDisplay = vaGetDisplayDRM(hbDisplay->vaFd);
@@ -1552,15 +1673,19 @@ hb_display_t * hb_display_init(const char         * driver_name,
     {
         // Use only environment if it's set
         hb_log("hb_display_init: using VA driver '%s'", env);
-        if (try_va_interface(hbDisplay, NULL) != 0)
+        if (try_va_interface(hbDisplay, NULL) == 0)
         {
-            close(hbDisplay->vaFd);
-            free(hbDisplay);
-            return NULL;
+            return hbDisplay;
         }
     }
     else
     {
+        // Try default
+        hb_log("hb_display_init: attempting VA default driver");
+        if (try_va_interface(hbDisplay, NULL) == 0)
+        {
+            return hbDisplay;
+        }
         // Try list of VA driver names
         for (ii = 0; interface_names[ii] != NULL; ii++)
         {
@@ -1571,17 +1696,11 @@ hb_display_t * hb_display_init(const char         * driver_name,
                 return hbDisplay;
             }
         }
-        // Try default
-        unsetenv("LIBVA_DRIVER_NAME");
-        hb_log("hb_display_init: attempting VA default driver");
-        if (try_va_interface(hbDisplay, NULL) != 0)
-        {
-            close(hbDisplay->vaFd);
-            free(hbDisplay);
-            return NULL;
-        }
     }
-    return hbDisplay;
+    // No working VA driver found
+    close(hbDisplay->vaFd);
+    free(hbDisplay);
+    return NULL;
 }
 
 void hb_display_close(hb_display_t ** _d)

@@ -1,7 +1,7 @@
 /* mf_common.h
  *
  * Copyright (c) Dash Santosh <dash.sathyanarayanan@multicorewareinc.com>
- * Copyright (c) 2003-2025 HandBrake Team
+ * Copyright (c) 2003-2026 HandBrake Team
  * This file is part of the HandBrake source code.
  * Homepage: <http://handbrake.fr/>.
  * It may be used under the terms of the GNU General Public License v2.
@@ -12,6 +12,8 @@
 #define HANDBRAKE_MF_COMMON_H
 
 #include "handbrake/hbffmpeg.h"
+
+int hb_directx_available();
 
 #if HB_PROJECT_FEATURE_MF
 #include <windows.h>
@@ -28,9 +30,10 @@ typedef struct MFFunctions {
 } MFFunctions;
 #endif // HB_PROJECT_FEATURE_MF
 
-int            hb_mf_h264_available();
-int            hb_mf_h265_available();
-int            hb_mf_av1_available();
-int            hb_check_mf_available();
+int hb_mf_h264_available();
+int hb_mf_h265_available();
+int hb_mf_av1_available();
+int hb_check_mf_available();
+int hb_mf_are_filters_supported(hb_list_t *filters);
 
 #endif // HANDBRAKE_MF_COMMON_H

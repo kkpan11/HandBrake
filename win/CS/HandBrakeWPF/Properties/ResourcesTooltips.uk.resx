@@ -541,10 +541,10 @@ HB_EXIT_CODE
 Зверніть увагу, що при використанні цих режимів можуть бути недосконалості в макеті інтерфейсу користувача. Залежно від мови, можливо, варто спробувати обидва режими, щоб знайти найкращий.</value>
   </data>
   <data name="AudioView_Quality" xml:space="preserve">
-    <value>Встановіть певний рівень якості для аудіо.
-1 - найнижча якість, 5 - найвища якість.
+    <value>Target a specific quality level for audio.
+Higher values mean higher quality.
 
-Бітрейт залежить від джерела.</value>
+Bitrate will vary source to source.</value>
   </data>
   <data name="OptionsView_DestinationReplacementOptions" xml:space="preserve">
     <value>Для створення шляху призначення можна використовувати окремо або разом такі параметри
@@ -567,5 +567,8 @@ HB_EXIT_CODE
   </data>
   <data name="PictureSettingsView_AutomaticKeepAR" xml:space="preserve">
     <value>Зміна розміру дисплея призведе до розтягування відео</value>
+  </data>
+  <data name="Video_ColourRange" xml:space="preserve">
+    <value>Color Range. Determines the values of the reference black and white. Set to limited to maximize compatibility.</value>
   </data>
 </root>

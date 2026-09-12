@@ -1,6 +1,6 @@
 /* work.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -148,12 +148,6 @@ static void work_func( void * _work )
             hb_job_close(&job);
             job = new_job;
         }
-#if HB_PROJECT_FEATURE_QSV
-        if (hb_qsv_available())
-        {
-            hb_qsv_setup_job(job);
-        }
-#endif
 
         hb_job_setup_passes(job->h, job, passes);
         hb_job_close(&job);
@@ -224,7 +218,8 @@ hb_work_object_t* hb_audio_decoder(hb_handle_t *h, int codec)
     return w;
 }
 
-hb_work_object_t* hb_video_decoder(hb_handle_t *h, int vcodec, int param, void *hw_device_ctx)
+hb_work_object_t* hb_video_decoder(hb_handle_t *h, int vcodec, int param,
+                                   void *hw_device_ctx, hb_hwaccel_t *hw_accel)
 {
     hb_work_object_t * w;
 
@@ -236,6 +231,7 @@ hb_work_object_t* hb_video_decoder(hb_handle_t *h, int vcodec, int param, void *
     }
     w->codec_param = param;
     w->hw_device_ctx = hw_device_ctx;
+    w->hw_accel = hw_accel;
 
     return w;
 }
@@ -305,12 +301,14 @@ hb_work_object_t* hb_video_encoder(hb_handle_t *h, int vcodec)
             w->codec_param = AV_CODEC_ID_HEVC;
             break;
         case HB_VCODEC_FFMPEG_VCE_AV1:
+        case HB_VCODEC_FFMPEG_VCE_AV1_10BIT:
             w = hb_get_work(h, WORK_ENCAVCODEC);
             w->codec_param = AV_CODEC_ID_AV1;
             break;
 #endif
 #if HB_PROJECT_FEATURE_NVENC
         case HB_VCODEC_FFMPEG_NVENC_H264:
+        case HB_VCODEC_FFMPEG_NVENC_H264_10BIT:
             w = hb_get_work(h, WORK_ENCAVCODEC);
             w->codec_param = AV_CODEC_ID_H264;
             break;
@@ -325,10 +323,33 @@ hb_work_object_t* hb_video_encoder(hb_handle_t *h, int vcodec)
             w->codec_param = AV_CODEC_ID_AV1;
             break;
 #endif
+#if HB_PROJECT_FEATURE_VAAPI
+        case HB_VCODEC_FFMPEG_VAAPI_H264:
+            w = hb_get_work(h, WORK_ENCAVCODEC);
+            w->codec_param = AV_CODEC_ID_H264;
+            break;
+        case HB_VCODEC_FFMPEG_VAAPI_H265:
+            w = hb_get_work(h, WORK_ENCAVCODEC);
+            w->codec_param = AV_CODEC_ID_HEVC;
+            break;
+        case HB_VCODEC_FFMPEG_VAAPI_AV1:
+            w = hb_get_work(h, WORK_ENCAVCODEC);
+            w->codec_param = AV_CODEC_ID_AV1;
+            break;
+        case HB_VCODEC_FFMPEG_VAAPI_VP8:
+            w = hb_get_work(h, WORK_ENCAVCODEC);
+            w->codec_param = AV_CODEC_ID_VP8;
+            break;
+        case HB_VCODEC_FFMPEG_VAAPI_VP9:
+            w = hb_get_work(h, WORK_ENCAVCODEC);
+            w->codec_param = AV_CODEC_ID_VP9;
+            break;
+#endif
 #ifdef __APPLE__
         case HB_VCODEC_VT_H264:
         case HB_VCODEC_VT_H265:
         case HB_VCODEC_VT_H265_10BIT:
+        case HB_VCODEC_VT_PRORES:
             w = hb_get_work(h, WORK_ENCVT);
             break;
 #endif
@@ -353,6 +374,15 @@ hb_work_object_t* hb_video_encoder(hb_handle_t *h, int vcodec)
         case HB_VCODEC_FFMPEG_FFV1:
            w = hb_get_work(h, WORK_ENCAVCODEC);
            w->codec_param = AV_CODEC_ID_FFV1;
+            break;
+        case HB_VCODEC_FFMPEG_PRORES:
+           w = hb_get_work(h, WORK_ENCAVCODEC);
+           w->codec_param = AV_CODEC_ID_PRORES;
+            break;
+        case HB_VCODEC_FFMPEG_DNXHR:
+        case HB_VCODEC_FFMPEG_DNXHR_10BIT:
+            w = hb_get_work(h, WORK_ENCAVCODEC);
+            w->codec_param = AV_CODEC_ID_DNXHD;
             break;
         default:
             hb_error("Unknown video codec (0x%x)", vcodec );
@@ -403,6 +433,49 @@ hb_work_object_t* hb_audio_encoder(hb_handle_t *h, int codec)
         return hb_get_work(h, WORK_ENCAVCODEC_AUDIO);
     }
     return NULL;
+}
+
+void hb_display_filters_info(hb_list_t *list_filter, const char *indent)
+{
+    if (hb_list_count(list_filter))
+    {
+        hb_log("%s+ %s", indent, hb_list_count(list_filter) > 1 ? "filters" : "filter");
+        for (int j = 0; j < hb_list_count(list_filter); j++)
+        {
+            hb_filter_object_t *filter = hb_list_item(list_filter, j);
+            if (filter->aliased && global_verbosity_level < 2)
+            {
+                continue;
+            }
+            char *settings = hb_filter_settings_string(filter->id,
+                                                       filter->settings);
+            if (settings != NULL && strlen(settings) > 0)
+                hb_log("%s   + %s (%s)", indent, filter->name, settings);
+            else
+                hb_log("%s   + %s (default settings)", indent, filter->name);
+            free(settings);
+            if (filter->info)
+            {
+                hb_filter_info_t *info;
+
+                info = filter->info(filter);
+                if (info != NULL &&
+                    info->human_readable_desc != NULL &&
+                    info->human_readable_desc[0] != 0)
+                {
+                    char *line, * pos = NULL;
+                    char *tmp = strdup(info->human_readable_desc);
+                    for (line = strtok_r(tmp,  "\n", &pos); line != NULL;
+                         line = strtok_r(NULL, "\n", &pos))
+                    {
+                        hb_log("%s     + %s", indent, line);
+                    }
+                    free(tmp);
+                }
+                hb_filter_info_close(&info);
+            }
+        }
+    }
 }
 
 /**
@@ -481,6 +554,7 @@ void hb_display_job_info(hb_job_t *job)
     switch (job->mux)
     {
         case HB_MUX_AV_MP4:
+        case HB_MUX_AV_MOV:
             if (job->optimize)
                 hb_log("     + optimized for HTTP streaming (fast start)");
             if (job->ipod_atom)
@@ -505,21 +579,21 @@ void hb_display_job_info(hb_job_t *job)
 
     hb_log(" * video track");
 
-#if HB_PROJECT_FEATURE_QSV
-    if (hb_qsv_decode_is_enabled(job))
+    if (job->hw_accel)
     {
-        hb_log("   + decoder: %s %d-bit (%s)",
-               hb_qsv_decode_get_codec_name(title->video_codec_param), hb_get_bit_depth(job->input_pix_fmt), av_get_pix_fmt_name(job->input_pix_fmt));
-    } else
-#endif
-    if (hb_hwaccel_decode_is_enabled(job))
-    {
-        hb_log("   + decoder: %s %d-bit hwaccel (%s, %s)",
-               title->video_codec_name, hb_get_bit_depth(job->input_pix_fmt), av_get_pix_fmt_name(job->input_pix_fmt), av_get_pix_fmt_name(job->hw_pix_fmt));
+        hb_log("   + decoder: %s %s %d-bit (%s, %s)",
+               job->hw_accel->name,
+               avcodec_get_name(title->video_codec_param),
+               hb_get_bit_depth(job->input_pix_fmt),
+               av_get_pix_fmt_name(job->input_pix_fmt),
+               job->hw_pix_fmt != AV_PIX_FMT_NONE ? av_get_pix_fmt_name(job->hw_pix_fmt) : "sw");
     }
     else
     {
-        hb_log("   + decoder: %s %d-bit (%s)", title->video_codec_name, hb_get_bit_depth(job->input_pix_fmt), av_get_pix_fmt_name(job->input_pix_fmt));
+        hb_log("   + decoder: %s %d-bit (%s)",
+            avcodec_get_name(title->video_codec_param),
+            hb_get_bit_depth(job->input_pix_fmt),
+            av_get_pix_fmt_name(job->input_pix_fmt));
     }
 
     if( title->video_bitrate )
@@ -527,46 +601,8 @@ void hb_display_job_info(hb_job_t *job)
         hb_log( "     + bitrate %d kbps", title->video_bitrate / 1000 );
     }
 
-    // Filters can modify dimensions.  So show them first.
-    if( hb_list_count( job->list_filter ) )
-    {
-        hb_log("   + %s", hb_list_count( job->list_filter) > 1 ? "filters" : "filter" );
-        for( i = 0; i < hb_list_count( job->list_filter ); i++ )
-        {
-            hb_filter_object_t * filter = hb_list_item( job->list_filter, i );
-            if (filter->aliased && global_verbosity_level < 2)
-            {
-                continue;
-            }
-            char * settings = hb_filter_settings_string(filter->id,
-                                                        filter->settings);
-            if (settings != NULL)
-                hb_log("     + %s (%s)", filter->name, settings);
-            else
-                hb_log("     + %s (default settings)", filter->name);
-            free(settings);
-            if (filter->info)
-            {
-                hb_filter_info_t * info;
-
-                info = filter->info(filter);
-                if (info != NULL &&
-                    info->human_readable_desc != NULL &&
-                    info->human_readable_desc[0] != 0)
-                {
-                    char * line, * pos = NULL;
-                    char * tmp = strdup(info->human_readable_desc);
-                    for (line = strtok_r(tmp,  "\n", &pos); line != NULL;
-                         line = strtok_r(NULL, "\n", &pos))
-                    {
-                        hb_log("       + %s", line);
-                    }
-                    free(tmp);
-                }
-                hb_filter_info_close(&info);
-            }
-        }
-    }
+    // Filters can modify dimensions. So show them first.
+    hb_display_filters_info(job->list_filter, "     ");
 
     hb_log( "   + Output geometry" );
     hb_log( "     + storage dimensions: %d x %d", job->width, job->height );
@@ -588,99 +624,19 @@ void hb_display_job_info(hb_job_t *job)
         }
         if (job->encoder_tune && *job->encoder_tune)
         {
-            switch (job->vcodec)
-            {
-                case HB_VCODEC_X264_8BIT:
-                case HB_VCODEC_X264_10BIT:
-                case HB_VCODEC_X265_8BIT:
-                case HB_VCODEC_X265_10BIT:
-                case HB_VCODEC_X265_12BIT:
-                case HB_VCODEC_X265_16BIT:
-                case HB_VCODEC_SVT_AV1:
-                case HB_VCODEC_SVT_AV1_10BIT:
-                case HB_VCODEC_FFMPEG_VP9:
-                case HB_VCODEC_FFMPEG_VP9_10BIT:
-                    hb_log("     + tune:    %s", job->encoder_tune);
-                default:
-                    break;
-            }
+            hb_log("     + tune:    %s", job->encoder_tune);
         }
-        if (job->encoder_options != NULL && *job->encoder_options &&
-            job->vcodec != HB_VCODEC_THEORA)
+        if (job->encoder_options != NULL && *job->encoder_options)
         {
             hb_log("     + options: %s", job->encoder_options);
         }
         if (job->encoder_profile && *job->encoder_profile)
         {
-            switch (job->vcodec)
-            {
-                case HB_VCODEC_X264_8BIT:
-                case HB_VCODEC_X264_10BIT:
-                case HB_VCODEC_X265_8BIT:
-                case HB_VCODEC_X265_10BIT:
-                case HB_VCODEC_X265_12BIT:
-                case HB_VCODEC_X265_16BIT:
-                case HB_VCODEC_FFMPEG_QSV_H264:
-                case HB_VCODEC_FFMPEG_QSV_H265:
-                case HB_VCODEC_FFMPEG_QSV_H265_10BIT:
-                case HB_VCODEC_FFMPEG_QSV_AV1:
-                case HB_VCODEC_FFMPEG_QSV_AV1_10BIT:
-                case HB_VCODEC_FFMPEG_VCE_H264:
-                case HB_VCODEC_FFMPEG_VCE_H265:
-                case HB_VCODEC_FFMPEG_VCE_H265_10BIT:
-                case HB_VCODEC_FFMPEG_VCE_AV1:
-                case HB_VCODEC_FFMPEG_NVENC_H264:
-                case HB_VCODEC_FFMPEG_NVENC_H265:
-                case HB_VCODEC_FFMPEG_NVENC_H265_10BIT:
-                case HB_VCODEC_FFMPEG_NVENC_AV1:
-                case HB_VCODEC_FFMPEG_NVENC_AV1_10BIT:
-                case HB_VCODEC_VT_H264:
-                case HB_VCODEC_VT_H265:
-                case HB_VCODEC_VT_H265_10BIT:
-                case HB_VCODEC_FFMPEG_MF_H264:
-                case HB_VCODEC_FFMPEG_MF_H265:
-                case HB_VCODEC_FFMPEG_MF_AV1:
-                case HB_VCODEC_SVT_AV1:
-                case HB_VCODEC_SVT_AV1_10BIT:
-                    hb_log("     + profile: %s", job->encoder_profile);
-                default:
-                    break;
-            }
+            hb_log("     + profile: %s", job->encoder_profile);
         }
         if (job->encoder_level && *job->encoder_level)
         {
-            switch (job->vcodec)
-            {
-                case HB_VCODEC_X264_8BIT:
-                case HB_VCODEC_X264_10BIT:
-                case HB_VCODEC_X265_8BIT:
-                case HB_VCODEC_X265_10BIT:
-                case HB_VCODEC_X265_12BIT:
-                case HB_VCODEC_FFMPEG_QSV_H264:
-                case HB_VCODEC_FFMPEG_QSV_H265:
-                case HB_VCODEC_FFMPEG_QSV_H265_10BIT:
-                case HB_VCODEC_FFMPEG_QSV_AV1:
-                case HB_VCODEC_FFMPEG_QSV_AV1_10BIT:
-                case HB_VCODEC_FFMPEG_VCE_H264:
-                case HB_VCODEC_FFMPEG_VCE_H265:
-                case HB_VCODEC_FFMPEG_VCE_H265_10BIT:
-                case HB_VCODEC_FFMPEG_VCE_AV1:
-                case HB_VCODEC_FFMPEG_NVENC_H264:
-                case HB_VCODEC_FFMPEG_NVENC_H265:
-                case HB_VCODEC_FFMPEG_NVENC_H265_10BIT:
-                case HB_VCODEC_FFMPEG_NVENC_AV1:
-                case HB_VCODEC_FFMPEG_NVENC_AV1_10BIT:
-                case HB_VCODEC_VT_H264:
-                case HB_VCODEC_VT_H265_10BIT:
-                case HB_VCODEC_SVT_AV1:
-                case HB_VCODEC_SVT_AV1_10BIT:
-                // MF h.264/h.265 currently only supports auto level
-                // case HB_VCODEC_FFMPEG_MF_H264:
-                // case HB_VCODEC_FFMPEG_MF_H265:
-                    hb_log("     + level:   %s", job->encoder_level);
-                default:
-                    break;
-            }
+            hb_log("     + level:   %s", job->encoder_level);
         }
 
         if (job->vquality > HB_INVALID_VIDEO_QUALITY)
@@ -752,6 +708,18 @@ void hb_display_job_info(hb_job_t *job)
         {
             hb_log("     + hdr10+ dynamic metadata");
 
+        }
+
+        if (job->spherical_mapping.projection > HB_SPHERICAL_UNSET)
+        {
+            hb_log("     + spherical mapping: %s",
+                   av_spherical_projection_name(job->spherical_mapping.projection));
+        }
+
+        if (job->stereo_3d.type > HB_STEREO3D_UNSET && job->stereo_3d.type < HB_STEREO3D_UNSPEC)
+        {
+            hb_log("     + stereo 3d: %s",
+                   av_stereo3d_type_name(job->stereo_3d.type));
         }
     }
 
@@ -891,6 +859,8 @@ void hb_display_job_info(hb_job_t *job)
                     hb_log("     + compression level: %.2f",
                            audio->config.out.compression_level);
                 }
+
+                hb_display_filters_info(audio->config.out.list_filter, "     ");
             }
         }
     }
@@ -1140,7 +1110,7 @@ static int sanitize_subtitles( hb_job_t * job )
         else if (subtitle->format        == TEXTSUB &&
                  subtitle->config.codec  == HB_SCODEC_PASS)
         {
-            if (job->mux == HB_MUX_AV_MP4)
+            if (job->mux == HB_MUX_AV_MP4 || job->mux == HB_MUX_AV_MOV)
             {
                 subtitle->config.codec = HB_SCODEC_TX3G;
             }
@@ -1164,7 +1134,7 @@ static int sanitize_subtitles( hb_job_t * job )
         // not required to add the subtitle rendering filter since
         // we will always try to do it here.
         hb_filter_object_t *filter = hb_filter_init(HB_FILTER_RENDER_SUB);
-        hb_add_filter_dict(job, filter, NULL);
+        hb_add_filter_dict(job->list_filter, filter, NULL);
     }
 
     return 0;
@@ -1261,6 +1231,17 @@ static int sanitize_audio(hb_job_t *job)
             audio->config.out.samples_per_frame =
                                     audio->config.in.samples_per_frame;
             audio->config.out.samplerate = audio->config.in.samplerate;
+
+            av_channel_layout_copy(audio->config.out.ch_layout, audio->config.in.ch_layout);
+
+            // Remove unneeded filters.
+            hb_filter_object_t *filter = NULL;
+            while ((filter = hb_list_item(audio->config.out.list_filter, 0)))
+            {
+                hb_list_rem(audio->config.out.list_filter, filter);
+                hb_filter_close(&filter);
+            }
+
             continue;
         }
 
@@ -1287,7 +1268,7 @@ static int sanitize_audio(hb_job_t *job)
             /* Mixdown not specified, set the default mixdown */
             audio->config.out.mixdown =
                 hb_mixdown_get_default(audio->config.out.codec,
-                                       audio->config.in.channel_layout);
+                                       audio->config.in.ch_layout);
             hb_log("work: mixdown not specified, track %d setting mixdown %s",
                    audio->config.out.track,
                    hb_mixdown_get_name(audio->config.out.mixdown));
@@ -1296,7 +1277,7 @@ static int sanitize_audio(hb_job_t *job)
         {
             best_mixdown =
                 hb_mixdown_get_best(audio->config.out.codec,
-                                    audio->config.in.channel_layout,
+                                    audio->config.in.ch_layout,
                                     audio->config.out.mixdown);
             if (audio->config.out.mixdown != best_mixdown)
             {
@@ -1308,6 +1289,8 @@ static int sanitize_audio(hb_job_t *job)
                 audio->config.out.mixdown = best_mixdown;
             }
         }
+
+        av_channel_layout_from_mask(audio->config.out.ch_layout, hb_ff_mixdown_xlat(audio->config.out.mixdown, NULL));
 
         /* sense-check the requested compression level */
         if (audio->config.out.compression_level < 0)
@@ -1490,13 +1473,6 @@ static void sanitize_filter_list_pre(hb_job_t *job, hb_geometry_t src_geo)
             }
         }
     }
-
-#if HB_PROJECT_FEATURE_QSV && (defined( _WIN32 ) || defined( __MINGW32__ ))
-    if (hb_qsv_is_enabled(job))
-    {
-        hb_qsv_sanitize_filter_list(job);
-    }
-#endif
 }
 
 static enum AVPixelFormat match_pix_fmt(enum AVPixelFormat pix_fmt,
@@ -1542,11 +1518,14 @@ static void sanitize_filter_list_post(hb_job_t *job)
     if (job->hw_pix_fmt == AV_PIX_FMT_VIDEOTOOLBOX)
     {
         hb_vt_setup_hw_filters(job);
+        return;
     }
 #endif
 
-    if ((job->hw_pix_fmt == AV_PIX_FMT_NONE || job->hw_pix_fmt == AV_PIX_FMT_QSV) &&
-        hb_video_encoder_pix_fmt_is_supported(job->vcodec, job->input_pix_fmt, job->encoder_profile) == 0)
+    hb_hwaccel_t *hwaccel = job->hw_accel;
+
+    if (hb_video_encoder_pix_fmt_is_supported(job->vcodec, job->input_pix_fmt, job->encoder_profile) == 0 ||
+        (job->hw_pix_fmt != AV_PIX_FMT_NONE && hwaccel && (hwaccel->caps & HB_HWACCEL_CAP_FORMAT_REQUIRED)))
     {
         // Some encoders require a specific input pixel format
         // that could be different from the current pipeline format.
@@ -1568,7 +1547,7 @@ static void sanitize_filter_list_post(hb_job_t *job)
 
         hb_filter_object_t *filter = hb_filter_init(HB_FILTER_FORMAT);
         char *settings = hb_strdup_printf("format=%s", av_get_pix_fmt_name(encoder_pix_fmt));
-        hb_add_filter(job, filter, settings);
+        hb_add_filter(job->list_filter, filter, settings);
         free(settings);
     }
 }
@@ -1723,13 +1702,26 @@ static void sanitize_dynamic_hdr_metadata_passthru(hb_job_t *job)
                                           scale_factor_x, scale_factor_y,
                                           crop_top, crop_bottom, crop_left, crop_right,
                                           pad_top, pad_bottom, pad_left, pad_right);
-        hb_add_filter(job, filter, settings);
+        hb_add_filter(job->list_filter, filter, settings);
         free(settings);
+
+        job->color_range = job->passthru_dynamic_hdr_metadata & HB_HDR_DYNAMIC_METADATA_DOVI &&
+                          (job->dovi.dv_profile == 5 || (job->dovi.dv_profile == 10 && job->dovi.dv_bl_signal_compatibility_id == 0)) ?
+                           AVCOL_RANGE_JPEG : job->color_range;
 #else
         hb_log("work: libdovi not available, disabling Dolby Vision");
         job->passthru_dynamic_hdr_metadata &= ~HB_HDR_DYNAMIC_METADATA_DOVI;
 #endif
     }
+
+#if HB_PROJECT_FEATURE_QSV
+    // QSV decoder does not propagate
+    // the dynamic hdr side data
+    if (job->passthru_dynamic_hdr_metadata)
+    {
+        job->hw_decode &= ~HB_DECODE_QSV;
+    }
+#endif
 }
 
 /**
@@ -1749,8 +1741,6 @@ static void do_job(hb_job_t *job)
     hb_title_t       * title;
     hb_interjob_t    * interjob;
     hb_work_object_t * w;
-    hb_audio_t       * audio;
-    hb_subtitle_t    * subtitle;
 
     title = job->title;
 
@@ -1786,9 +1776,11 @@ static void do_job(hb_job_t *job)
     {
         job->hw_decode = 0;
     }
-    if (job->hw_decode == HB_DECODE_SUPPORT_MF)
+    if (job->hw_decode & HB_DECODE_QSV)
     {
-        job->hw_decode |= HB_DECODE_SUPPORT_FORCE_HW;
+        #if HB_PROJECT_FEATURE_QSV
+        hb_qsv_setup_job(job);
+        #endif
     }
 
     // This must be performed before initializing filters because
@@ -1807,21 +1799,42 @@ static void do_job(hb_job_t *job)
         hb_filter_init_t init;
 
         sanitize_filter_list_pre(job, title->geometry);
+        sanitize_dynamic_hdr_metadata_passthru(job);
 
-        // Select the optimal pixel formats for the pipeline
-        job->hw_pix_fmt = hb_get_best_hw_pix_fmt(job);
-        job->input_pix_fmt = hb_get_best_pix_fmt(job);
+        job->hw_pix_fmt = AV_PIX_FMT_NONE;
 
-        // Init hwaccel context if needed
-        if (hb_hwaccel_decode_is_enabled(job))
+        // Initialize the hardware acceleration if possible
+        hb_hwaccel_t *hwaccel = hb_get_hwaccel(job->hw_decode);
+        if (hb_hwaccel_can_use_full_hw_pipeline(hwaccel,
+                                                job->list_filter,
+                                                job->vcodec,
+                                                job->title->rotation,
+                                                job->color_range && job->color_range != job->title->color_range))
         {
-            hb_hwaccel_hw_ctx_init(job->title->video_codec_param,
-                                   job->hw_decode,
-                                   &job->hw_device_ctx,
-                                   job);
+            job->hw_accel = hwaccel;
+            job->hw_pix_fmt = hwaccel->hw_pix_fmt;
+        }
+        else if (job->hw_decode & HB_DECODE_FORCE_HW)
+        {
+            job->hw_accel = hwaccel;
         }
 
-        sanitize_dynamic_hdr_metadata_passthru(job);
+        // Init hwaccel context if needed
+        if (job->hw_accel)
+        {
+            result = hb_hwaccel_hw_device_ctx_init(job->hw_accel->type,
+                                                   job->hw_device_index,
+                                                  &job->hw_device_ctx);
+            if (result)
+            {
+                job->hw_accel = NULL;
+                job->hw_pix_fmt = AV_PIX_FMT_NONE;
+            }
+        }
+
+        // Select the optimal pixel formats for the pipeline
+        job->input_pix_fmt = hb_get_best_pix_fmt(job);
+
         sanitize_filter_list_post(job);
 
         memset(&init, 0, sizeof(init));
@@ -1830,23 +1843,11 @@ static void do_job(hb_job_t *job)
         init.job = job;
         init.pix_fmt = job->input_pix_fmt;
         init.hw_pix_fmt = job->hw_pix_fmt;
-
-        init.color_prim = title->color_prim;
-        init.color_transfer = title->color_transfer;
-        init.color_matrix = title->color_matrix;
-        // Dolby Vision profile 5 requires full range
-        // TODO: find a better way to handle this
-        init.color_range = job->passthru_dynamic_hdr_metadata & HB_HDR_DYNAMIC_METADATA_DOVI &&
-                            (job->dovi.dv_profile == 5 ||
-                             (job->dovi.dv_profile == 10 && job->dovi.dv_bl_signal_compatibility_id == 0)) ?
-                            title->color_range : AVCOL_RANGE_MPEG;
-#if HB_PROJECT_FEATURE_QSV
-        if (hb_qsv_full_path_is_enabled(job))
-        {
-            init.color_range = (job->qsv.ctx->out_range == AVCOL_RANGE_UNSPECIFIED) ? title->color_range : job->qsv.ctx->out_range;
-        }
-#endif
-        init.chroma_location = title->chroma_location;
+        init.color_prim      = job->color_prim;
+        init.color_transfer  = job->color_transfer;
+        init.color_matrix    = job->color_matrix;
+        init.color_range     = job->color_range != AVCOL_RANGE_UNSPECIFIED ? job->color_range : title->color_range;
+        init.chroma_location = job->chroma_location;
         init.geometry = title->geometry;
         memset(init.crop, 0, sizeof(int[4]));
         init.vrate = job->vrate;
@@ -1961,7 +1962,7 @@ static void do_job(hb_job_t *job)
         // Audio fifos must be initialized before sync
         for (i = 0; i < hb_list_count(job->list_audio); i++)
         {
-            audio = hb_list_item(job->list_audio, i);
+            hb_audio_t *audio = hb_list_item(job->list_audio, i);
 
             /* set up the audio work fifos */
             audio->priv.fifo_in   = hb_fifo_init(FIFO_LARGE, FIFO_LARGE_WAKE);
@@ -1992,7 +1993,7 @@ static void do_job(hb_job_t *job)
     // Subtitle decoder and sync fifos must be initialized before sync
     for (i = 0; i < hb_list_count( job->list_subtitle ); i++)
     {
-        subtitle = hb_list_item( job->list_subtitle, i );
+        hb_subtitle_t *subtitle = hb_list_item( job->list_subtitle, i );
         w = hb_get_work( job->h, subtitle->codec );
         // Must set capacity of the raw-FIFO to be set >= the maximum
         // number of subtitle lines that could be decoded prior to a
@@ -2029,7 +2030,8 @@ static void do_job(hb_job_t *job)
     }
 
     // Video decoder
-    w = hb_video_decoder(job->h, title->video_codec, title->video_codec_param, job->hw_device_ctx);
+    w = hb_video_decoder(job->h, title->video_codec, title->video_codec_param,
+                         job->hw_device_ctx, job->hw_accel);
     if (w == NULL)
     {
         *job->done_error = HB_ERROR_WRONG_INPUT;
@@ -2048,7 +2050,72 @@ static void do_job(hb_job_t *job)
     {
         for( i = 0; i < hb_list_count( job->list_audio ); i++ )
         {
-            audio = hb_list_item( job->list_audio, i );
+            hb_audio_t *audio = hb_list_item( job->list_audio, i );
+            hb_list_t *list_filter = audio->config.out.list_filter;
+
+            hb_filter_init_t init;
+            memset(&init, 0, sizeof(init));
+
+            init.samplerate = audio->config.out.samplerate;
+            init.sample_fmt = AV_SAMPLE_FMT_FLT;
+            av_channel_layout_copy(&init.ch_layout, audio->config.out.ch_layout);
+
+            // Audio Filter Chain
+            if (hb_list_count(list_filter))
+            {
+                for (int j = 0; j < hb_list_count(list_filter);)
+                {
+                    hb_filter_object_t *filter = hb_list_item(list_filter, j);
+                    filter->done = &job->done;
+                    if (filter->init != NULL && filter->init(filter, &init))
+                    {
+                        hb_log("Failure to initialise audio filter '%s', disabling",
+                                filter->name);
+                        hb_list_rem(list_filter, filter);
+                        hb_filter_close(&filter);
+                        continue;
+                    }
+                    j++;
+                }
+            }
+
+            av_channel_layout_copy(audio->config.out.ch_layout, &init.ch_layout);
+            av_channel_layout_uninit(&init.ch_layout);
+
+            if (hb_list_count(list_filter))
+            {
+                // Combine HB_AUDIO_FILTER_AVFILTERs that are sequential
+                hb_avfilter_audio_combine(list_filter);
+
+                for (int j = 0; j < hb_list_count(list_filter);)
+                {
+                    hb_filter_object_t *filter = hb_list_item(list_filter, j);
+                    filter->done = &job->done;
+                    if (filter->post_init != NULL && filter->post_init(filter, job))
+                    {
+                        hb_log("Failure to initialise audio filter '%s', disabling",
+                               filter->name);
+                        hb_list_rem(list_filter, filter);
+                        hb_filter_close(&filter);
+                        continue;
+                    }
+                    j++;
+                }
+
+                // Set up the audio filter fifo pipeline
+                hb_fifo_t *fifo_in = audio->priv.fifo_sync;
+                for (int j = 0; j < hb_list_count(list_filter); j++)
+                {
+                    hb_filter_object_t *filter = hb_list_item(list_filter, j);
+                    if (!filter->skip)
+                    {
+                        filter->fifo_in = fifo_in;
+                        filter->fifo_out = hb_fifo_init(FIFO_MINI, FIFO_MINI_WAKE);
+                        fifo_in = filter->fifo_out;
+                    }
+                }
+                audio->priv.fifo_render = fifo_in;
+            }
 
             /*
             * Audio Encoder Thread
@@ -2063,7 +2130,14 @@ static void do_job(hb_job_t *job)
                 goto cleanup;
             }
             w->init_delay = &audio->priv.init_delay;
-            w->fifo_in    = audio->priv.fifo_sync;
+            if (audio->priv.fifo_render)
+            {
+                w->fifo_in    = audio->priv.fifo_render;
+            }
+            else
+            {
+                w->fifo_in    = audio->priv.fifo_sync;
+            }
             w->fifo_out   = audio->priv.fifo_out;
             w->extradata  = &audio->priv.extradata;
             w->audio      = audio;
@@ -2073,7 +2147,7 @@ static void do_job(hb_job_t *job)
 
         for( i = 0; i < hb_list_count( job->list_subtitle ); i++ )
         {
-            subtitle = hb_list_item(job->list_subtitle, i);
+            hb_subtitle_t *subtitle = hb_list_item(job->list_subtitle, i);
 
             /*
             * Subtitle Encoder Thread
@@ -2179,7 +2253,8 @@ static void do_job(hb_job_t *job)
         w = hb_list_item(job->list_work, i);
         w->thread = hb_thread_init(w->name, hb_work_loop, w, HB_LOW_PRIORITY);
     }
-    if (job->list_filter && !job->indepth_scan)
+
+    if (!job->indepth_scan)
     {
         for (i = 0; i < hb_list_count(job->list_filter); i++)
         {
@@ -2191,6 +2266,25 @@ static void do_job(hb_job_t *job)
                 // to start the filter's thread
                 filter->thread = hb_thread_init(filter->name, filter_loop,
                                                 filter, HB_LOW_PRIORITY);
+            }
+        }
+
+        for (i = 0; i < hb_list_count(job->list_audio); i++)
+        {
+            hb_audio_t *audio = hb_list_item(job->list_audio, i);
+            hb_list_t *list_filter = audio->config.out.list_filter;
+
+            for (int j = 0; j < hb_list_count(list_filter); j++)
+            {
+                hb_filter_object_t *filter = hb_list_item(list_filter, j);
+
+                if (!filter->skip)
+                {
+                    // Filters were initialized earlier, so we just need
+                    // to start the filter's thread
+                    filter->thread = hb_thread_init(filter->name, filter_loop,
+                                                    filter, HB_LOW_PRIORITY);
+                }
             }
         }
     }
@@ -2227,6 +2321,22 @@ cleanup:
         }
     }
 
+    for (i = 0; i < hb_list_count(job->list_audio); i++)
+    {
+        hb_audio_t *audio = hb_list_item(job->list_audio, i);
+        hb_list_t *list_filter = audio->config.out.list_filter;
+
+        for (int j = 0; j < hb_list_count(list_filter); j++)
+        {
+            hb_filter_object_t *filter = hb_list_item(list_filter, j);
+            if( filter->thread != NULL )
+            {
+                hb_thread_close(&filter->thread);
+            }
+            filter->close(filter);
+        }
+    }
+
     // Close work objects
     // A work thread can use data created by another work thread's init.
     // So close all work threads before closing thread data.
@@ -2255,7 +2365,7 @@ cleanup:
 
     for (i = 0; i < hb_list_count( job->list_subtitle ); i++)
     {
-        subtitle = hb_list_item( job->list_subtitle, i );
+        hb_subtitle_t *subtitle = hb_list_item( job->list_subtitle, i );
         if( subtitle )
         {
             hb_fifo_close( &subtitle->fifo_in );
@@ -2266,7 +2376,18 @@ cleanup:
     }
     for (i = 0; i < hb_list_count( job->list_audio ); i++)
     {
-        audio = hb_list_item( job->list_audio, i );
+        hb_audio_t *audio = hb_list_item(job->list_audio, i);
+        hb_list_t *list_filter = audio->config.out.list_filter;
+
+        for (int j = 0; j < hb_list_count(list_filter); j++)
+        {
+            hb_filter_object_t *filter = hb_list_item(list_filter, j);
+            if (!filter->skip)
+            {
+                hb_fifo_close(&filter->fifo_out);
+            }
+        }
+
         if( audio->priv.fifo_in != NULL )
             hb_fifo_close( &audio->priv.fifo_in );
         if( audio->priv.fifo_raw != NULL )
@@ -2295,7 +2416,7 @@ cleanup:
     }
 
     hb_buffer_pool_free();
-    hb_hwaccel_hw_ctx_close(&job->hw_device_ctx);
+    hb_hwaccel_hw_device_ctx_close(&job->hw_device_ctx);
 }
 
 static inline void copy_chapter( hb_buffer_t * dst, hb_buffer_t * src )

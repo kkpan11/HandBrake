@@ -1,6 +1,6 @@
 /* cropscale_vt.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -34,13 +34,14 @@ static const char crop_scale_vt_template[] =
     "width=^"HB_INT_REG"$:height=^"HB_INT_REG"$:"
     "crop-top=^"HB_INT_REG"$:crop-bottom=^"HB_INT_REG"$:"
     "crop-left=^"HB_INT_REG"$:crop-right=^"HB_INT_REG"$:"
-    "format=^"HB_INT_REG"$";
+    "format=^"HB_INT_REG"$:color-range=^"HB_INT_REG"$";
 
 hb_filter_object_t hb_filter_crop_scale_vt =
 {
     .id                = HB_FILTER_CROP_SCALE_VT,
     .enforce_order     = 1,
     .name              = "Crop and Scale (VideoToolbox)",
+    .short_name        = "cropscale_vt",
     .settings          = NULL,
     .init              = crop_scale_vt_init,
     .work              = crop_scale_vt_work,
@@ -183,7 +184,13 @@ static int crop_scale_vt_init(hb_filter_object_t *filter,
     {
         format = init->pix_fmt;
     }
-    pv->pool = hb_cv_create_pixel_buffer_pool(width, height, format, init->color_range);
+    int color_range = AVCOL_RANGE_UNSPECIFIED;
+    hb_dict_extract_int(&color_range, settings, "color-range");
+    if (color_range == AVCOL_RANGE_UNSPECIFIED)
+    {
+        color_range = init->color_range;
+    }
+    pv->pool = hb_cv_create_pixel_buffer_pool(width, height, format, color_range);
     if (pv->pool == NULL)
     {
         hb_log("cropscale_vt: CVPixelBufferPoolCreate failed");

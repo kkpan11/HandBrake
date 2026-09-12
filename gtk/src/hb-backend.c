@@ -1,6 +1,6 @@
 /* hb-backend.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -48,6 +48,18 @@ typedef struct
     int count;
     options_map_t *map;
 } combo_opts_t;
+
+static options_map_t d_audio_autonaming_opts[] =
+{
+    {N_("None"),    "none",          0},
+    {N_("Unnamed"), "unnamed",       1},
+    {N_("All"),     "all",         2},
+};
+combo_opts_t audio_autonaming_opts =
+{
+    sizeof(d_audio_autonaming_opts)/sizeof(options_map_t),
+    d_audio_autonaming_opts
+};
 
 static options_map_t d_subtitle_track_sel_opts[] =
 {
@@ -238,6 +250,18 @@ combo_opts_t rotate_opts =
     d_rotate_opts
 };
 
+static options_map_t d_color_range_opts[] =
+{
+    {N_("Same as source"), "auto",     0},
+    {N_("Limited"),        "limited",  1},
+    {N_("Full"),           "full",     2},
+};
+combo_opts_t color_range_opts =
+{
+    sizeof(d_color_range_opts)/sizeof(options_map_t),
+    d_color_range_opts
+};
+
 static options_map_t d_resolution_opts[] =
 {
     {N_("4320p 8K Ultra HD"),  "4320p",  4320},
@@ -391,6 +415,53 @@ combo_opts_t trellis_opts =
 {
     sizeof(d_trellis_opts)/sizeof(options_map_t),
     d_trellis_opts
+};
+
+// The list of display languages selectable in the preferences.
+// Please keep this list up to date with the actually translated
+// languages in po/LINGUAS. The country codes are glibc locales.
+static options_map_t d_ui_language_opts[] =
+{
+    {N_("Use System Language"),                   "",        0},
+    {"Български (Bulgarian)",                     "bg",      1},
+    {"Català (Catalan)",                          "ca",      2},
+    {"Corsu (Corsican)",                          "co",      3},
+    {"Deutsch (Deutsch)",                         "de",      4},
+    {"Español (Spanish)",                         "es",      5},
+    {"Euskara (Basque)",                          "eu",      6},
+    {"Suomi (Finnish)",                           "fi",      7},
+    {"Français (French)",                         "fr",      8},
+    {"Galego (Galician (Spain))",                 "gl_ES",   9},
+    {"Italiano (Italian)",                        "it",     10},
+    {"日本語 (Japanese)",                          "ja",     11},
+    {"한국어 (Korean)",                             "ko",     12},
+    {"Nederlands (Dutch)",                        "nl",     13},
+    {"Português do Brasil (Brazilian Portuguese)","pt_BR",  14},
+    {"Русский (Russian)",                         "ru",     15},
+    {"slovenščina (Slovenian)",                   "sl_SI",  16},
+    {"Svenska (Swedish)",                         "sv",     17},
+    {"简体中文 (Simplified Chinese)",               "zh_CN",  18},
+    
+//  {"Hrvatski (Croatian)",             "hr_HR",  8},
+//  {"čeština (Czech)",                 "cs_CZ",  9},
+//  {"Dansk (Danish)",                  "da_DK", 10},
+    {"English",                         "en",    19},
+//  {"ქართული (Georgian)",              "ka_GE", 15},
+//  {"עברית (Hebrew)",                  "he_IL", 17},
+//  {"Norsk (Norwegian)",               "no_NO", 21},
+//  {"Polski (Polish)",                 "pl_PL", 22},
+//  {"Portugues (Portuguese)",          "pt_PT", 23},
+//  {"Română (Romanian)",               "ro_RO", 25},
+//  {"සිංහල (Sinhala)",                 "si_LK", 27},
+//  {"slovenčina (Slovak)",             "sk_SK", 28},
+//  {"ไทย (Thai)",                      "th_TH", 32},
+//  {"Türkçe (Turkish)",                "tr_TR", 33},
+//  {"Українська (Ukranian)",           "uk_UA", 34},
+};
+combo_opts_t ui_language_opts =
+{
+    sizeof(d_ui_language_opts)/sizeof(options_map_t),
+    d_ui_language_opts
 };
 
 typedef struct
@@ -576,6 +647,12 @@ combo_name_map_t combo_name_map[] =
         generic_opt_get
     },
     {
+        "AudioAutomaticNamingBehavior",
+        &audio_autonaming_opts,
+        small_opts_set,
+        generic_opt_get
+    },
+    {
         "AudioTrackSelectionBehavior",
         &audio_track_sel_opts,
         small_opts_set,
@@ -726,6 +803,12 @@ combo_name_map_t combo_name_map[] =
         generic_opt_get
     },
     {
+        "VideoColorRange",
+        &color_range_opts,
+        small_opts_set,
+        generic_opt_get
+    },
+    {
         "crop_mode",
         &crop_opts,
         small_opts_set,
@@ -746,6 +829,12 @@ combo_name_map_t combo_name_map[] =
     {
         "PicturePadColor",
         &pad_color_opts,
+        small_opts_set,
+        generic_opt_get
+    },
+    {
+        "UiLanguage",
+        &ui_language_opts,
         small_opts_set,
         generic_opt_get
     },
@@ -1324,7 +1413,7 @@ ghb_mix_opts_filter(GtkComboBox *combo, gint acodec)
 }
 
 static void
-grey_mix_opts(signal_user_data_t *ud, gint acodec, uint64_t layout)
+grey_mix_opts(signal_user_data_t *ud, gint acodec, const char *layout)
 {
     ghb_log_func();
 
@@ -1333,7 +1422,7 @@ grey_mix_opts(signal_user_data_t *ud, gint acodec, uint64_t layout)
          mix = hb_mixdown_get_next(mix))
     {
         grey_builder_combo_box_item("AudioMixdown", mix->amixdown,
-                !hb_mixdown_is_supported(mix->amixdown, acodec, layout));
+                !hb_mixdown_is_supported_s(mix->amixdown, acodec, layout));
     }
 }
 
@@ -1407,8 +1496,18 @@ ghb_grey_combo_options(signal_user_data_t *ud)
 
     acodec = ghb_settings_audio_encoder_codec(ud->settings, "AudioEncoder");
 
-    uint64_t layout = aconfig != NULL ? aconfig->in.channel_layout : UINT64_MAX;
-    guint32 in_codec = aconfig != NULL ? aconfig->in.codec : 0;
+    const char *layout = "7.1";
+    guint32 in_codec = 0;
+    char layout_name[256];
+
+    if (aconfig != NULL)
+    {
+        hb_layout_get_name(aconfig->in.ch_layout,
+            layout_name, sizeof(layout_name));
+        layout = layout_name;
+        in_codec = aconfig->in.codec;
+    }
+
     fallback = ghb_select_fallback(ud->settings, acodec);
     gint copy_mask = ghb_get_copy_mask(ud->settings);
     acodec = ghb_select_audio_codec(mux->format, in_codec, acodec,
@@ -1417,12 +1516,12 @@ ghb_grey_combo_options(signal_user_data_t *ud)
 }
 
 gint
-ghb_get_best_mix(uint64_t layout, gint acodec, gint mix)
+ghb_get_best_mix(const char *layout, gint acodec, gint mix)
 {
     if (mix == HB_AMIXDOWN_NONE)
         mix = HB_INVALID_AMIXDOWN;
 
-    return hb_mixdown_get_best(acodec, layout, mix);
+    return hb_mixdown_get_best_s(acodec, layout, mix);
 }
 
 // Set up the model for the combo box
@@ -3322,6 +3421,8 @@ ghb_audio_bitrate_opts_filter(
     store = GTK_LIST_STORE(gtk_combo_box_get_model (combo));
     if (gtk_tree_model_get_iter_first (GTK_TREE_MODEL(store), &iter))
     {
+        int highest_rate = -1;
+        int lowest_rate = -1;
         do
         {
             gtk_tree_model_get(GTK_TREE_MODEL(store), &iter, 3, &ivalue, -1);
@@ -3332,9 +3433,29 @@ ghb_audio_bitrate_opts_filter(
             else
             {
                 gtk_list_store_set(store, &iter, 1, TRUE, -1);
+                // Store the highest and lowest supported rates
+                // Assume that the list of rates is sorted in ascending order
+                highest_rate = ivalue;
+                if (lowest_rate == -1)
+                    lowest_rate = ivalue;
             }
             done = !gtk_tree_model_iter_next (GTK_TREE_MODEL(store), &iter);
         } while (!done);
+
+        const char *current_id = gtk_combo_box_get_active_id(combo);
+        int current_rate = ghb_lookup_audio_bitrate_rate(current_id);
+        // If the previously set value is not in the allowed range,
+        // set the new value to the lowest/highest allowed
+        if (current_rate < first_rate)
+        {
+            g_autofree char *lowest_id = g_strdup_printf("%d", lowest_rate);
+            gtk_combo_box_set_active_id(combo, lowest_id);
+        }
+        else if (current_rate > last_rate)
+        {
+            g_autofree char *highest_id = g_strdup_printf("%d", highest_rate);
+            gtk_combo_box_set_active_id(combo, highest_id);
+        }
     }
 }
 

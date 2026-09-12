@@ -1,6 +1,6 @@
 /* util.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -88,7 +88,7 @@ int ghb_dialog_run (GtkDialog *dialog)
         gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
 
     if (!gtk_widget_get_visible(GTK_WIDGET(dialog)))
-        gtk_widget_show(GTK_WIDGET(dialog));
+        gtk_widget_set_visible(GTK_WIDGET(dialog), TRUE);
 
     response_handler = g_signal_connect(dialog,
                                         "response",
@@ -267,4 +267,24 @@ ghb_file_is_subtitle (const char *filename)
 {
     return ghb_file_is_ssa_subtitle(filename) ||
            ghb_file_is_srt_subtitle(filename);
+}
+
+char *
+ghb_format_pretty_size (int64_t bytes)
+{
+    double kilobytes = bytes / 1000;
+    double megabytes = kilobytes / 1000;
+    double gigabytes = megabytes / 1000;
+    if (gigabytes != 0)
+    {
+        return g_strdup_printf("%0.1f %s", gigabytes, _("GB"));
+    }
+    else if (megabytes != 0)
+    {
+        return g_strdup_printf(_("%0.1f %s"), megabytes, _("MB"));
+    }
+    else
+    {
+        return g_strdup_printf(_("%0.1f %s"), kilobytes, _("KB"));
+    }
 }

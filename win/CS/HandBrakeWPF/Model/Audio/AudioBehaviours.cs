@@ -24,7 +24,11 @@ namespace HandBrakeWPF.Model.Audio
         private AudioBehaviourModes selectedBehaviour;
         private BindingList<Language> selectedLanguages;
         private AudioTrackDefaultsMode trackDefaultBehaviour;
-        
+
+        private AudioTrackNamingBehaviour audioAutomaticNamingBehavior;
+
+        private bool audioTrackNamePassthru;
+
         public AudioBehaviours()
         {
             this.SelectedBehaviour = AudioBehaviourModes.None;
@@ -33,16 +37,25 @@ namespace HandBrakeWPF.Model.Audio
             this.BehaviourTracks = new BindingList<AudioBehaviourTrack>();
             this.AllowedPassthruOptions = new BindingList<HBAudioEncoder>();
             this.AudioFallbackEncoder = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.AvAac);
+      
         }
 
         public AudioBehaviours(AudioBehaviours behaviours)
         {
             this.SelectedBehaviour = behaviours.SelectedBehaviour;
             this.SelectedTrackDefaultBehaviour = behaviours.SelectedTrackDefaultBehaviour;
-            this.SelectedLanguages = new BindingList<Language>(behaviours.selectedLanguages.ToList());
-            this.BehaviourTracks = behaviours.BehaviourTracks;
-            this.AllowedPassthruOptions = new BindingList<HBAudioEncoder>(behaviours.AllowedPassthruOptions);
+            this.SelectedLanguages = behaviours.selectedLanguages != null
+                ? new BindingList<Language>(behaviours.selectedLanguages.ToList())
+                : new BindingList<Language>();
+            this.BehaviourTracks = behaviours.BehaviourTracks != null
+                ? new BindingList<AudioBehaviourTrack>(behaviours.BehaviourTracks.ToList())
+                : new BindingList<AudioBehaviourTrack>();
+            this.AllowedPassthruOptions = behaviours.AllowedPassthruOptions != null
+                ? new BindingList<HBAudioEncoder>(behaviours.AllowedPassthruOptions)
+                : new BindingList<HBAudioEncoder>();
             this.AudioFallbackEncoder = behaviours.AudioFallbackEncoder;
+            this.AudioTrackNamePassthru = behaviours.AudioTrackNamePassthru;
+            this.AudioAutomaticNamingBehavior = behaviours.AudioAutomaticNamingBehavior;
         }
 
         public AudioBehaviourModes SelectedBehaviour
@@ -102,5 +115,35 @@ namespace HandBrakeWPF.Model.Audio
         public IList<HBAudioEncoder> AllowedPassthruOptions { get; set; }
 
         public HBAudioEncoder AudioFallbackEncoder { get; set; }
+        
+        public bool AudioTrackNamePassthru
+        {
+            get => this.audioTrackNamePassthru;
+            set
+            {
+                if (value == this.audioTrackNamePassthru)
+                {
+                    return;
+                }
+
+                this.audioTrackNamePassthru = value;
+                this.NotifyOfPropertyChange(() => this.AudioTrackNamePassthru);
+            }
+        }
+
+        public AudioTrackNamingBehaviour AudioAutomaticNamingBehavior
+        {
+            get => this.audioAutomaticNamingBehavior;
+            set
+            {
+                if (value == this.audioAutomaticNamingBehavior)
+                {
+                    return;
+                }
+
+                this.audioAutomaticNamingBehavior = value;
+                this.NotifyOfPropertyChange(() => this.AudioAutomaticNamingBehavior);
+            }
+        }
     }
 }

@@ -1,6 +1,6 @@
 /* callbacks.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -42,6 +42,9 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
 
 #if defined( __FreeBSD__ ) || defined(__OpenBSD__)
 #include <sys/socket.h>
@@ -74,9 +77,6 @@ static void source_dialog_start_scan(GtkFileChooser *chooser, int title_id);
 #define DBUS_LOGIND_SERVICE         "org.freedesktop.login1"
 #define DBUS_LOGIND_PATH            "/org/freedesktop/login1"
 #define DBUS_LOGIND_INTERFACE       "org.freedesktop.login1.Manager"
-#define GPM_DBUS_PM_SERVICE         "org.freedesktop.PowerManagement"
-#define GPM_DBUS_INHIBIT_PATH       "/org/freedesktop/PowerManagement/Inhibit"
-#define GPM_DBUS_INHIBIT_INTERFACE  "org.freedesktop.PowerManagement.Inhibit"
 #endif
 
 #if !defined(_WIN32)
@@ -267,26 +267,12 @@ shutdown_logind (void)
 #endif
 }
 
-#if !defined(_WIN32)
-// For inhibit and shutdown
-#define GPM_DBUS_SM_SERVICE         "org.gnome.SessionManager"
-#define GPM_DBUS_SM_PATH            "/org/gnome/SessionManager"
-#define GPM_DBUS_SM_INTERFACE       "org.gnome.SessionManager"
-#endif
-
-enum {
-    GHB_SUSPEND_UNINHIBITED = 0,
-    GHB_SUSPEND_INHIBITED_GPM,
-    GHB_SUSPEND_INHIBITED_GSM,
-    GHB_SUSPEND_INHIBITED_GTK
-};
-static int suspend_inhibited = GHB_SUSPEND_UNINHIBITED;
-static guint suspend_cookie;
+static guint suspend_cookie = 0;
 
 static void
 inhibit_suspend (void)
 {
-    if (suspend_inhibited != GHB_SUSPEND_UNINHIBITED)
+    if (suspend_cookie)
     {
         // Already inhibited
         return;
@@ -294,26 +280,17 @@ inhibit_suspend (void)
     suspend_cookie = gtk_application_inhibit(GTK_APPLICATION(GHB_APPLICATION_DEFAULT),
             NULL, GTK_APPLICATION_INHIBIT_SUSPEND | GTK_APPLICATION_INHIBIT_LOGOUT,
             _("An encode is in progress."));
-    if (suspend_cookie != 0)
-    {
-        suspend_inhibited = GHB_SUSPEND_INHIBITED_GTK;
-        return;
-    }
 }
 
 static void
 uninhibit_suspend (void)
 {
-    switch (suspend_inhibited)
+    if (suspend_cookie)
     {
-        case GHB_SUSPEND_INHIBITED_GTK:
-            gtk_application_uninhibit(GTK_APPLICATION(GHB_APPLICATION_DEFAULT),
-                                      suspend_cookie);
-            break;
-        default:
-            break;
+        gtk_application_uninhibit(GTK_APPLICATION(GHB_APPLICATION_DEFAULT),
+                                  suspend_cookie);
+        suspend_cookie = 0;
     }
-    suspend_inhibited = GHB_SUSPEND_UNINHIBITED;
 }
 
 // This is a dependency map used for greying widgets
@@ -449,8 +426,8 @@ static GhbBinding widget_bindings[] =
     {"PictureDetelecine", "active-id", "custom10", "PictureDetelecineCustom", "visible"},
     {"PictureColorspacePreset", "active-id", "custom11", "PictureColorspaceCustom", "visible"},
     {"VideoEncoder", "active-id", "svt_av1|svt_av1_10bit|x264|x264_10bit", "x264FastDecode", "visible"},
-    {"VideoEncoder", "active-id", "svt_av1|svt_av1_10bit|x264|x264_10bit|x265|x265_10bit|x265_12bit|x265_16bit|mpeg4|mpeg2|VP8|VP9|VP9_10bit|qsv_av1|qsv_av1_10bit|qsv_h264|qsv_h265|qsv_h265_10bit", "VideoOptionExtraWindow", "visible"},
-    {"VideoEncoder", "active-id", "svt_av1|svt_av1_10bit|x264|x264_10bit|x265|x265_10bit|x265_12bit|x265_16bit|mpeg4|mpeg2|VP8|VP9|VP9_10bit|qsv_av1|qsv_av1_10bit|qsv_h264|qsv_h265|qsv_h265_10bit", "VideoOptionExtraLabel", "visible"},
+    {"VideoEncoder", "active-id", "svt_av1|svt_av1_10bit|x264|x264_10bit|x265|x265_10bit|x265_12bit|x265_16bit|mpeg4|mpeg2|VP8|VP9|VP9_10bit|qsv_av1|qsv_av1_10bit|qsv_h264|qsv_h265|qsv_h265_10bit|vce_av1|vce_av1_10bit|vce_h264|vce_h265|vce_h265_10bit|vaapi_h264|vaapi_hevc|vaapi_av1|vaapi_vp8|vaapi_vp9", "VideoOptionExtraWindow", "visible"},
+    {"VideoEncoder", "active-id", "svt_av1|svt_av1_10bit|x264|x264_10bit|x265|x265_10bit|x265_12bit|x265_16bit|mpeg4|mpeg2|VP8|VP9|VP9_10bit|qsv_av1|qsv_av1_10bit|qsv_h264|qsv_h265|qsv_h265_10bit|vce_av1|vce_av1_10bit|vce_h264|vce_h265|vce_h265_10bit|vaapi_h264|vaapi_hevc|vaapi_av1|vaapi_vp8|vaapi_vp9", "VideoOptionExtraLabel", "visible"},
     {"auto_name", "active", NULL, "autoname_box", "sensitive"},
     {"CustomTmpEnable", "active", NULL, "CustomTmpDir", "sensitive"},
     {"PresetCategory", "active-id", "new", "PresetCategoryName", "visible"},
@@ -1203,19 +1180,17 @@ update_title_duration(signal_user_data_t *ud)
     gint hh, mm, ss;
     gint64 duration;
     gchar *text;
-    GtkWidget *widget;
     int title_id, titleindex;
     const hb_title_t *title;
 
     title_id = ghb_dict_get_int(ud->settings, "title");
     title = ghb_lookup_title(title_id, &titleindex);
-    widget = ghb_builder_widget("title_duration");
 
     duration = title_range_get_duration(ud->settings, title);
     ghb_break_duration(duration, &hh, &mm, &ss);
 
     text = g_strdup_printf("%02d:%02d:%02d", hh, mm, ss);
-    gtk_label_set_text(GTK_LABEL(widget), text);
+    gtk_label_set_text(GTK_LABEL(ghb_builder_widget("title_duration_inline")), text);
     g_free(text);
 }
 
@@ -1457,10 +1432,10 @@ show_scan_progress(signal_user_data_t *ud)
     GtkLabel       * label;
 
     widget = ghb_builder_widget("SourceInfoBox");
-    gtk_widget_hide(widget);
+    gtk_widget_set_visible(widget, FALSE);
 
     widget = ghb_builder_widget("SourceScanBox");
-    gtk_widget_show(widget);
+    gtk_widget_set_visible(widget, TRUE);
 
     progress = GTK_PROGRESS_BAR(ghb_builder_widget("scan_prog"));
     gtk_progress_bar_set_fraction(progress, 0);
@@ -1480,10 +1455,10 @@ hide_scan_progress(signal_user_data_t *ud)
     gtk_progress_bar_set_fraction(progress, 1.0);
 
     widget = ghb_builder_widget("SourceScanBox");
-    gtk_widget_hide(widget);
+    gtk_widget_set_visible(widget, FALSE);
 
     widget = ghb_builder_widget("SourceInfoBox");
-    gtk_widget_show(widget);
+    gtk_widget_set_visible(widget, TRUE);
 }
 
 static void
@@ -1676,11 +1651,11 @@ single_title_dialog (GtkFileChooser *chooser)
 
     adj = gtk_adjustment_new(1, 0, 1000, 1, 10, 10);
     spin = gtk_spin_button_new(adj, 1, 0);
-    gtk_widget_show(spin);
+    gtk_widget_set_visible(spin, TRUE);
     msg = gtk_message_dialog_get_message_area(GTK_MESSAGE_DIALOG(dialog));
     gtk_box_append(GTK_BOX(msg), spin);
     g_signal_connect(dialog, "response", G_CALLBACK(single_title_dialog_response), chooser);
-    gtk_widget_show(dialog);
+    gtk_widget_set_visible(dialog, TRUE);
 }
 
 static void
@@ -2345,16 +2320,16 @@ mini_preview_update (gboolean has_preview, signal_user_data_t *ud)
     if (ghb_dict_get_bool(ud->prefs, "ShowMiniPreview") && has_preview)
     {
         widget = ghb_builder_widget("summary_image");
-        gtk_widget_hide(widget);
+        gtk_widget_set_visible(widget, FALSE);
         widget = ghb_builder_widget("summary_preview_image");
-        gtk_widget_show(widget);
+        gtk_widget_set_visible(gtk_widget_get_parent(widget), TRUE);
     }
     else
     {
         widget = ghb_builder_widget("summary_image");
-        gtk_widget_show(widget);
+        gtk_widget_set_visible(widget, TRUE);
         widget = ghb_builder_widget("summary_preview_image");
-        gtk_widget_hide(widget);
+        gtk_widget_set_visible(gtk_widget_get_parent(widget), FALSE);
     }
 }
 
@@ -3378,7 +3353,6 @@ set_has_chapter_markers (gboolean markers, signal_user_data_t *ud)
         ghb_set_destination(ud);
     GtkWidget *widget = ghb_builder_widget("ChapterMarkers");
     gtk_widget_set_sensitive(widget, markers);
-    update_title_duration(ud);
 
     markers &= ghb_dict_get_int(ud->settings, "ChapterMarkers");
     ghb_dict_set_bool(dest, "ChapterMarkers", markers);
@@ -3524,6 +3498,7 @@ ptop_update_bg (int side_changed, double new_val, gpointer data)
 
     if (ghb_settings_combo_int(ud->settings, "PtoPType") == 0)
         set_has_chapter_markers (end_int > start_int, ud);
+    update_title_duration(ud);
 }
 
 G_MODULE_EXPORT void
@@ -3815,7 +3790,7 @@ preferences_action_cb (GSimpleAction *action, GVariant *param, gpointer data)
 }
 
 G_MODULE_EXPORT gboolean
-prefs_response_cb (GtkDialog *dialog, GdkEvent *event, gpointer data)
+prefs_response_cb (GtkWindow *dialog, gpointer data)
 {
     ghb_prefs_store();
     gtk_widget_set_visible(GTK_WIDGET(dialog), FALSE);
@@ -3826,7 +3801,7 @@ prefs_response_cb (GtkDialog *dialog, GdkEvent *event, gpointer data)
 
         // Toss up a warning dialog
         ghb_question_dialog_run(hb_window, GHB_ACTION_NORMAL, _("_Quit"), NULL,
-                                _("Temp Directory Changed"),
+                                _("Settings Changed"),
                                 _("You must restart HandBrake now."));
         application_quit();
     }
@@ -3942,7 +3917,7 @@ ghb_countdown_dialog_show (const gchar *message, const gchar *action,
 
     g_signal_connect(dialog, "response",
                      G_CALLBACK(countdown_dialog_response), timeout_id);
-    gtk_widget_show(dialog);
+    gtk_widget_set_visible(dialog, TRUE);
 }
 
 G_GNUC_PRINTF(6, 0) static GtkMessageDialog *
@@ -4072,7 +4047,7 @@ ghb_alert_dialog_show (GtkMessageType type, const char *title,
         g_free(message);
     }
     g_signal_connect(dialog, "response", G_CALLBACK(message_dialog_destroy), NULL);
-    gtk_widget_show(dialog);
+    gtk_widget_set_visible(dialog, TRUE);
 }
 
 GtkWidget *
@@ -4143,7 +4118,7 @@ ghb_stop_encode_dialog_show (signal_user_data_t *ud)
         _("Finish Current and Stop"), _("Continue Encoding"));
     g_signal_connect(dialog, "response",
                      G_CALLBACK(stop_encode_dialog_response), ud);
-    gtk_widget_show(dialog);
+    gtk_widget_set_visible(dialog, TRUE);
 }
 
 static void
@@ -4166,7 +4141,7 @@ quit_dialog_show (void)
         _("Your movie will be lost if you don't continue encoding."),
         _("Cancel All and Quit"), NULL, NULL, _("Continue Encoding"));
     g_signal_connect(dialog, "response", G_CALLBACK(quit_dialog_response), NULL);
-    gtk_widget_show(dialog);
+    gtk_widget_set_visible(dialog, TRUE);
 }
 
 static void
@@ -4352,7 +4327,7 @@ ghb_start_next_job(signal_user_data_t *ud)
 
     ghb_log_func();
     progress = ghb_builder_widget("progressbar");
-    gtk_widget_show(progress);
+    gtk_widget_set_visible(progress, TRUE);
 
     count = ghb_array_len(ud->queue);
     for (ii = 0; ii < count; ii++)
@@ -4374,7 +4349,7 @@ ghb_start_next_job(signal_user_data_t *ud)
     ghb_send_notification(GHB_NOTIFY_QUEUE_DONE, 0, ud);
     queue_done_action(ud);
     ghb_update_pending(ud);
-    gtk_widget_hide(progress);
+    gtk_widget_set_visible(progress, FALSE);
     ghb_reset_disk_space_check();
 }
 
@@ -4485,6 +4460,41 @@ searching_status_string(signal_user_data_t *ud, ghb_instance_status_t *status)
     return status_str;
 }
 
+static gboolean is_flatpak = FALSE;
+static gboolean flatpak_spawn_enable = FALSE;
+static guint flatpak_spawn_watch_id = 0;
+
+static void
+flatpak_spawn_allowed (GDBusConnection *connection, const char *name,
+                       const char *name_owner, gpointer user_data)
+{
+    flatpak_spawn_enable = TRUE;
+    g_bus_unwatch_name(flatpak_spawn_watch_id);
+}
+
+static void
+flatpak_spawn_disallowed (GDBusConnection *connection, const char *name,
+                          gpointer user_data)
+{
+    gtk_widget_set_sensitive(ghb_builder_widget("SendFileTo"), FALSE);
+    g_bus_unwatch_name(flatpak_spawn_watch_id);
+}
+
+// Disable flatpak-spawn option if the org.freedesktop.Flatpak bus name is unavailable
+void
+ghb_check_send_to_available (void)
+{
+    if (g_access("/.flatpak-info", F_OK) == 0)
+    {
+        is_flatpak = TRUE;
+        flatpak_spawn_watch_id = g_bus_watch_name(G_BUS_TYPE_SESSION, "org.freedesktop.Flatpak",
+                                                  G_BUS_NAME_WATCHER_FLAGS_NONE,
+                                                  (GBusNameAppearedCallback) flatpak_spawn_allowed,
+                                                  (GBusNameVanishedCallback) flatpak_spawn_disallowed,
+                                                  NULL, NULL);
+    }
+}
+
 static void
 send_to_external_app(gint index, signal_user_data_t * ud)
 {
@@ -4492,6 +4502,12 @@ send_to_external_app(gint index, signal_user_data_t * ud)
     const gchar * send_file_to_target = ghb_dict_get_string(ud->prefs, "SendFileToTarget");
     if (send_file_to && send_file_to_target != NULL && send_file_to_target[0] != '\0')
     {
+        if (is_flatpak && !flatpak_spawn_enable)
+        {
+            ghb_log("Could not run command outside Flatpak as fr.handbrake.ghb "
+                    "doesn't have the --talk-name=org.freedesktop.Flatpak override");
+            return;
+        }
         GhbValue *queueDict, *jobDict, *destDict;
         queueDict = ghb_array_get(ud->queue, index);
         jobDict = ghb_dict_get(queueDict, "Job");
@@ -4499,7 +4515,7 @@ send_to_external_app(gint index, signal_user_data_t * ud)
 
         gchar * file = g_shell_quote(ghb_dict_get_string(destDict, "File"));
         gchar * command_str;
-        if (g_access("/.flatpak-info", F_OK) == 0)
+        if (is_flatpak)
         {
             command_str = g_strjoin(" ", "flatpak-spawn", "--host", "--", send_file_to_target, file, NULL);
         }
@@ -4736,6 +4752,11 @@ ghb_backend_events(signal_user_data_t *ud)
         ghb_queue_progress_set_fraction(ud, index, 1.0);
 
         ghb_clear_queue_state(GHB_STATE_WORKDONE);
+
+#ifdef __GLIBC__
+        malloc_trim(0);
+#endif
+
         if (ud->job_activity_log)
             g_io_channel_unref(ud->job_activity_log);
         ud->job_activity_log = NULL;
@@ -4752,7 +4773,7 @@ ghb_backend_events(signal_user_data_t *ud)
         else
         {
             uninhibit_suspend();
-            gtk_widget_hide(GTK_WIDGET(progress));
+            gtk_widget_set_visible(GTK_WIDGET(progress), FALSE);
             ghb_reset_disk_space_check();
         }
         ghb_save_queue(ud->queue);
@@ -4918,6 +4939,87 @@ ghb_log (const char *log, ...)
     va_end(args);
 }
 
+#if GTK_CHECK_VERSION(4, 10, 0)
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
+static void
+browse_uri_finish (GtkUriLauncher *launcher, GAsyncResult *result, gpointer data)
+{
+    g_autoptr(GError) error = NULL;
+    gtk_uri_launcher_launch_finish(launcher, result, &error);
+    if (error)
+    {
+        g_warning("Could not open URL: %s", error->message);
+    }
+}
+
+void
+ghb_browse_uri (const char *uri)
+{
+    GtkUriLauncher *launcher = gtk_uri_launcher_new(uri);
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow *parent = gtk_application_get_active_window(app);
+    gtk_uri_launcher_launch(launcher, parent, NULL, (GAsyncReadyCallback) browse_uri_finish, NULL);
+}
+
+static void
+file_open_finish (GtkFileLauncher *launcher, GAsyncResult *result, gpointer data)
+{
+    g_autoptr(GError) error = NULL;
+    if (!gtk_file_launcher_launch_finish(launcher, result, &error))
+    {
+        g_warning("Unable to open file: %s", error->message);
+    }
+    g_object_unref(launcher);
+}
+
+static void
+file_open_containing_folder_finish (GtkFileLauncher *launcher, GAsyncResult *result, gpointer data)
+{
+    g_autoptr(GError) error = NULL;
+    if (!gtk_file_launcher_open_containing_folder_finish(launcher, result, &error))
+    {
+        g_warning("Unable to open containing folder: %s", error->message);
+    }
+    g_object_unref(launcher);
+}
+
+void
+ghb_file_open (GFile *file)
+{
+    if (!file) return;
+
+    GtkFileLauncher *launcher = gtk_file_launcher_new(file);
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow *parent = gtk_application_get_active_window(app);
+    gtk_file_launcher_launch(launcher, parent, NULL, (GAsyncReadyCallback) file_open_finish, NULL);
+}
+
+void
+ghb_file_open_containing_folder (GFile *file)
+{
+    if (!file) return;
+
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow *parent = gtk_application_get_active_window(app);
+    if (g_file_test(g_file_peek_path(file), G_FILE_TEST_EXISTS))
+    {
+        GtkFileLauncher *launcher = gtk_file_launcher_new(file);
+        gtk_file_launcher_open_containing_folder(launcher, parent, NULL,
+                (GAsyncReadyCallback) file_open_containing_folder_finish, NULL);
+    }
+    else
+    {
+        g_autoptr(GFile) dir = g_file_get_parent(file);
+        GtkFileLauncher *launcher = gtk_file_launcher_new(dir);
+        gtk_file_launcher_launch(launcher, parent, NULL,
+                (GAsyncReadyCallback) file_open_finish, NULL);
+    }
+}
+
+G_GNUC_END_IGNORE_DEPRECATIONS
+#else
+
 static void
 browse_uri_finish (GtkWindow *parent, GAsyncResult *result, gpointer data)
 {
@@ -4937,6 +5039,30 @@ ghb_browse_uri (const gchar *uri)
     gtk_show_uri_full(parent, uri, GDK_CURRENT_TIME, NULL,
                       (GAsyncReadyCallback)browse_uri_finish, NULL);
 }
+
+void
+ghb_file_open (GFile *file)
+{
+    const gchar *path = g_file_peek_path(file);
+    g_autoptr(GError) error = NULL;
+    g_autofree char *uri = g_filename_to_uri(path, NULL, &error);
+    if (uri)
+        ghb_browse_uri(uri);
+    else
+        ghb_log("Could not convert path '%s' to URI: %s", path, error->message);
+}
+
+void
+ghb_file_open_containing_folder (GFile *file)
+{
+    if (!file) return;
+    
+    g_autoptr(GFile) dir = g_file_get_parent(file);
+    g_autofree char *uri = g_file_get_uri(dir);
+    ghb_browse_uri(uri);
+}
+
+#endif // GTK_CHECK_VERSION(4, 10, 0)
 
 G_MODULE_EXPORT void
 about_action_cb (GSimpleAction *action, GVariant *param, signal_user_data_t *ud)
@@ -5168,6 +5294,13 @@ use_m4v_changed_cb (GtkWidget *widget, gpointer data)
 
 G_MODULE_EXPORT void
 tmp_dir_enable_changed_cb (GtkWidget *widget, gpointer data)
+{
+    pref_changed_cb(widget, ghb_ud());
+    prefs_require_restart = TRUE;
+}
+
+G_MODULE_EXPORT void
+ui_language_changed_cb (GtkWidget *widget, gpointer data)
 {
     pref_changed_cb(widget, ghb_ud());
     prefs_require_restart = TRUE;
@@ -5750,10 +5883,6 @@ G_MODULE_EXPORT void
 log_directory_action_cb (GSimpleAction *action, GVariant *param, signal_user_data_t *ud)
 {
     g_autofree char *path = ghb_get_user_config_dir("EncodeLogs");
-    g_autofree char *uri = g_filename_to_uri(path, NULL, NULL);
-
-    if (!uri || !uri[0])
-        return;
-
-    ghb_browse_uri(uri);
+    g_autoptr(GFile) file = g_file_new_for_path(path);
+    ghb_file_open(file);
 }

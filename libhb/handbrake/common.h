@@ -1,6 +1,6 @@
 /* common.h
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -71,6 +71,10 @@
 #define HB_DEBUG_ASSERT(x, y) { if ((x)) { hb_error("ASSERT: %s", y); exit(1); } }
 #endif
 
+#ifndef __LIBHB__
+typedef void hb_channel_layout_t;
+#endif
+
 #define EVEN( a )               ((a) + ((a) & 1))
 #define MULTIPLE_MOD(a, b)      (((b) * (int)(((a) + ((b) / 2)) / (b))))
 #define MULTIPLE_MOD_UP(a, b)   (((b) * (int)(((a) + ((b) - 1)) / (b))))
@@ -104,7 +108,7 @@ typedef enum
 #include "libavutil/channel_layout.h"
 
 #if HB_PROJECT_FEATURE_QSV
-#include "qsv_libav.h"
+#include "qsv_common.h"
 #endif
 
 #ifdef __LIBHB__
@@ -159,6 +163,7 @@ hb_audio_t *hb_audio_copy(const hb_audio_t *src);
 hb_list_t *hb_audio_list_copy(const hb_list_t *src);
 void hb_audio_close(hb_audio_t **audio);
 void hb_audio_config_init(hb_audio_config_t * audiocfg);
+void hb_audio_config_close(hb_audio_config_t * audiocfg);
 int hb_audio_add(const hb_job_t * job, const hb_audio_config_t * audiocfg);
 hb_audio_config_t * hb_list_audio_config_item(hb_list_t * list, int i);
 
@@ -234,6 +239,37 @@ struct hb_encoder_s
     int         codec;      // HB_*CODEC_* define
     int         muxers;     // supported muxers
 };
+
+#ifdef __LIBHB__
+
+#define HB_HWACCEL_CAP_SCAN                 0x01
+#define HB_HWACCEL_CAP_ROTATE               0x02
+#define HB_HWACCEL_CAP_FORMAT_REQUIRED      0x04
+#define HB_HWACCEL_CAP_COLOR_RANGE          0x08
+
+
+struct hb_hwaccel_s
+{
+    int id;
+    const char *name;
+    const int *encoders;
+
+    int type;
+    int hw_pix_fmt;
+
+    int           (*can_filter)   (hb_list_t *filter_list);
+    void *        (*find_decoder) (int codec_param);
+    hb_buffer_t * (*upload)       (void *hw_frames_ctx, hb_buffer_t **buf_in);
+
+    int caps;
+};
+
+extern hb_hwaccel_t hb_hwaccel_videotoolbox;
+extern hb_hwaccel_t hb_hwaccel_qsv;
+extern hb_hwaccel_t hb_hwaccel_nvdec;
+extern hb_hwaccel_t hb_hwaccel_mf;
+extern hb_hwaccel_t hb_hwaccel_amfdec;
+#endif
 
 // Update win/CS/HandBrake.Interop/HandBrakeInterop/HbLib/hb_container_s.cs when changing this struct
 struct hb_container_s
@@ -398,6 +434,30 @@ typedef enum
     HB_HDR_DYNAMIC_METADATA_ALL       = HB_HDR_DYNAMIC_METADATA_HDR10PLUS | HB_HDR_DYNAMIC_METADATA_DOVI
 } hb_hdr_dynamic_metadata_mode_t;
 
+struct hb_spherical_mapping_s
+{
+    int projection;
+    int yaw;
+    int pitch;
+    int roll;
+    uint32_t bound_left;
+    uint32_t bound_top;
+    uint32_t bound_right;
+    uint32_t bound_bottom;
+    uint32_t padding;
+};
+
+struct hb_stereo_3d_s
+{
+    int type;
+    int flags;
+    int view;
+    int primary_eye;
+    uint32_t baseline;
+    hb_rational_t horizontal_disparity_adjustment;
+    hb_rational_t horizontal_field_of_view;
+};
+
 int hb_str_ends_with(const char *base, const char *str);
 
 /*******************************************************************************
@@ -432,6 +492,7 @@ int hb_str_ends_with(const char *base, const char *str);
  */
 
 void hb_common_global_init(int);
+void hb_common_global_close(int);
 
 int              hb_video_framerate_get_from_name(const char *name);
 const char*      hb_video_framerate_get_name(int framerate);
@@ -457,6 +518,26 @@ int              hb_audio_bitrate_get_default(uint32_t codec, int samplerate, in
 void             hb_audio_bitrate_get_limits(uint32_t codec, int samplerate, int mixdown, int *low, int *high);
 const hb_rate_t* hb_audio_bitrate_get_next(const hb_rate_t *last);
 
+
+const char * hb_audio_name_get_default(hb_channel_layout_t *ch_layout, int mixdown);
+
+typedef enum
+{
+    HB_AUDIO_AUTONAMING_NONE,
+    HB_AUDIO_AUTONAMING_UNNAMED,
+    HB_AUDIO_AUTONAMING_ALL
+} hb_audio_autonaming_behavior_t;
+
+int          hb_audio_autonaming_behavior_get_from_name(const char *name);
+
+const char * hb_audio_name_generate(const char *name,
+                                    hb_channel_layout_t *ch_layout, int mixdown, int keep_name,
+                                    hb_audio_autonaming_behavior_t behaviour);
+
+const char * hb_audio_name_generate_s(const char *name,
+                                      const char *layout, int mixdown, int keep_name,
+                                      hb_audio_autonaming_behavior_t behaviour);
+
 void        hb_video_quality_get_limits(uint32_t codec, float *low, float *high, float *granularity, int *direction);
 const char* hb_video_quality_get_name(uint32_t codec);
 
@@ -478,6 +559,8 @@ const char* const* hb_video_encoder_get_tunes   (int encoder);
 const char* const* hb_video_encoder_get_profiles(int encoder);
 const char* const* hb_video_encoder_get_levels  (int encoder);
 const int*         hb_video_encoder_get_pix_fmts(int encoder, const char *profile);
+int                hb_video_encoder_is_vaapi(int encoder);
+
 
 void  hb_audio_quality_get_limits(uint32_t codec, float *low, float *high, float *granularity, int *direction);
 float hb_audio_quality_get_best(uint32_t codec, float quality);
@@ -489,18 +572,21 @@ float hb_audio_compression_get_default(uint32_t codec);
 
 int                hb_audio_dither_get_default(void);
 int                hb_audio_dither_get_default_method(void); // default method, if enabled && supported
-int                hb_audio_dither_is_supported(uint32_t codec, int depth);
+int                hb_audio_dither_is_supported(uint32_t codec, int source_depth);
 int                hb_audio_dither_get_from_name(const char *name);
 const char*        hb_audio_dither_get_description(int method);
 const hb_dither_t* hb_audio_dither_get_next(const hb_dither_t *last);
 
-int                 hb_mixdown_is_supported(int mixdown, uint32_t codec, uint64_t layout);
+int                 hb_mixdown_is_supported(int mixdown, uint32_t codec, hb_channel_layout_t *ch_layout);
+int                 hb_mixdown_is_supported_s(int mixdown, uint32_t codec, const char *layout);
 int                 hb_mixdown_has_codec_support(int mixdown, uint32_t codec);
-int                 hb_mixdown_has_remix_support(int mixdown, uint64_t layout);
+int                 hb_mixdown_has_remix_support(int mixdown, hb_channel_layout_t *ch_layout);
 int                 hb_mixdown_get_discrete_channel_count(int mixdown);
 int                 hb_mixdown_get_low_freq_channel_count(int mixdown);
-int                 hb_mixdown_get_best(uint32_t codec, uint64_t layout, int mixdown);
-int                 hb_mixdown_get_default(uint32_t codec, uint64_t layout);
+int                 hb_mixdown_get_best(uint32_t codec, hb_channel_layout_t *ch_layout, int mixdown);
+int                 hb_mixdown_get_best_s(uint32_t codec, const char *layout, int mixdown);
+int                 hb_mixdown_get_default(uint32_t codec, hb_channel_layout_t *ch_layout);
+int                 hb_mixdown_get_default_s(uint32_t codec, const char *layout);
 hb_mixdown_t*       hb_mixdown_get_from_mixdown(int mixdown);
 int                 hb_mixdown_get_from_name(const char *name);
 const char*         hb_mixdown_get_name(int mixdown);
@@ -508,9 +594,9 @@ const char*         hb_mixdown_get_short_name(int mixdown);
 const char*         hb_mixdown_sanitize_name(const char *name);
 const hb_mixdown_t* hb_mixdown_get_next(const hb_mixdown_t *last);
 
-void                hb_layout_get_name(char * name, int size, int64_t layout);
-int                 hb_layout_get_discrete_channel_count(int64_t layout);
-int                 hb_layout_get_low_freq_channel_count(int64_t layout);
+int                 hb_layout_get_name(const hb_channel_layout_t *ch_layout, char *name, int size);
+int                 hb_layout_get_discrete_channel_count(const hb_channel_layout_t *ch_layout);
+int                 hb_layout_get_low_freq_channel_count(const hb_channel_layout_t *ch_layout);
 
 int                 hb_video_encoder_get_default(int muxer);
 hb_encoder_t*       hb_video_encoder_get_from_codec(int codec);
@@ -630,6 +716,9 @@ struct hb_job_s
 #define HB_VCODEC_QSV_MASK           0x00040000
 #define HB_VCODEC_FFMPEG_MASK        0x00010000
 
+#define HB_VCODEC_QSV_AV1_MASK       (HB_VCODEC_QSV_MASK | HB_VCODEC_AV1_MASK)
+#define HB_VCODEC_VAAPI_MASK         0x00008000
+
 #define HB_VCODEC_THEORA             0x00000001
 
 #define HB_VCODEC_X264_8BIT         (0x00000002 | HB_VCODEC_X264_MASK | HB_VCODEC_H264_MASK)
@@ -653,6 +742,7 @@ struct hb_job_s
 #define HB_VCODEC_FFMPEG_VCE_H265           (0x0000000E | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_H265_MASK)
 #define HB_VCODEC_FFMPEG_VCE_H265_10BIT     (0x0000000F | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_H265_MASK)
 #define HB_VCODEC_FFMPEG_VCE_AV1            (0x00000010 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_AV1_MASK)
+#define HB_VCODEC_FFMPEG_VCE_AV1_10BIT     (0x00000011 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_AV1_MASK)
 
 #define HB_VCODEC_FFMPEG_MF_H264    (0x00000020 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_H264_MASK)
 #define HB_VCODEC_FFMPEG_MF_H265    (0x00000021 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_H265_MASK)
@@ -663,6 +753,7 @@ struct hb_job_s
 #define HB_VCODEC_FFMPEG_NVENC_H265_10BIT   (0x00000032 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_H265_MASK)
 #define HB_VCODEC_FFMPEG_NVENC_AV1          (0x00000033 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_AV1_MASK)
 #define HB_VCODEC_FFMPEG_NVENC_AV1_10BIT    (0x00000034 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_AV1_MASK)
+#define HB_VCODEC_FFMPEG_NVENC_H264_10BIT   (0x00000035 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_H264_MASK)
 
 #define HB_VCODEC_FFMPEG_FFV1        (0x00000040 | HB_VCODEC_FFMPEG_MASK)
 
@@ -674,6 +765,8 @@ struct hb_job_s
 #define HB_VCODEC_VT_H265           (0x00000051 | HB_VCODEC_VT_MASK | HB_VCODEC_H265_MASK)
 #define HB_VCODEC_VT_H265_10BIT     (0x00000052 | HB_VCODEC_VT_MASK | HB_VCODEC_H265_MASK)
 
+#define HB_VCODEC_VT_PRORES         (0x00000053 | HB_VCODEC_VT_MASK)
+
 #define HB_VCODEC_FFMPEG_QSV_H264          (0x00000060 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_QSV_MASK | HB_VCODEC_H264_MASK)
 #define HB_VCODEC_FFMPEG_QSV_H265_8BIT     (0x00000061 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_QSV_MASK | HB_VCODEC_H265_MASK)
 #define HB_VCODEC_FFMPEG_QSV_H265_10BIT    (0x00000062 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_QSV_MASK | HB_VCODEC_H265_MASK)
@@ -682,6 +775,16 @@ struct hb_job_s
 #define HB_VCODEC_FFMPEG_QSV_AV1_8BIT      (0x00000070 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_QSV_MASK | HB_VCODEC_AV1_MASK)
 #define HB_VCODEC_FFMPEG_QSV_AV1_10BIT     (0x00000071 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_QSV_MASK | HB_VCODEC_AV1_MASK)
 #define HB_VCODEC_FFMPEG_QSV_AV1           HB_VCODEC_FFMPEG_QSV_AV1_8BIT
+
+#define HB_VCODEC_FFMPEG_VAAPI_H264  (0x00000080 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_VAAPI_MASK | HB_VCODEC_H264_MASK)
+#define HB_VCODEC_FFMPEG_VAAPI_H265  (0x00000081 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_VAAPI_MASK | HB_VCODEC_H265_MASK)
+#define HB_VCODEC_FFMPEG_VAAPI_AV1   (0x00000082 | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_VAAPI_MASK | HB_VCODEC_AV1_MASK)
+#define HB_VCODEC_FFMPEG_VAAPI_VP8   (0x0000008a | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_VAAPI_MASK)
+#define HB_VCODEC_FFMPEG_VAAPI_VP9   (0x0000008b | HB_VCODEC_FFMPEG_MASK | HB_VCODEC_VAAPI_MASK)
+
+#define HB_VCODEC_FFMPEG_PRORES      (0x00000100 | HB_VCODEC_FFMPEG_MASK)
+#define HB_VCODEC_FFMPEG_DNXHR       (0x00000101 | HB_VCODEC_FFMPEG_MASK)
+#define HB_VCODEC_FFMPEG_DNXHR_10BIT (0x00000102 | HB_VCODEC_FFMPEG_MASK)
 
 /* define an invalid CQ value compatible with all CQ-capable codecs */
 #define HB_INVALID_VIDEO_QUALITY (-1000.)
@@ -785,6 +888,28 @@ struct hb_job_s
     hb_hdr_dynamic_metadata_mode_t passthru_dynamic_hdr_metadata;
 
 
+    hb_spherical_mapping_t spherical_mapping;
+#define HB_SPHERICAL_UNSET                  -1
+#define HB_SPHERICAL_EQUIRECTANGULAR         0
+#define HB_SPHERICAL_CUBEMAP                 1
+#define HB_SPHERICAL_EQUIRECTANGULAR_TILE    2
+#define HB_SPHERICAL_HALF_EQUIRECTANGULAR    3
+#define HB_SPHERICAL_RECTILINEAR             4
+#define HB_SPHERICAL_FISHEYE                 5
+#define HB_SPHERICAL_PARAMETRIC_IMMERSIVE    6
+
+    hb_stereo_3d_t stereo_3d;
+#define HB_STEREO3D_UNSET                   -1
+#define HB_STEREO3D_2D                       0
+#define HB_STEREO3D_SIDEBYSIDE               1
+#define HB_STEREO3D_TOPBOTTOM                2
+#define HB_STEREO3D_FRAMESEQUENCE            3
+#define HB_STEREO3D_CHECKERBOARD             4
+#define HB_STEREO3D_SIDEBYSIDE_QUINCUNX      5
+#define HB_STEREO3D_LINES                    6
+#define HB_STEREO3D_COLUMNS                  7
+#define HB_STEREO3D_UNSPEC                   8
+
     hb_list_t     * list_chapter;
 
     /* List of audio settings. */
@@ -804,20 +929,25 @@ struct hb_job_s
      *     mux:  output file format
      *     file: file path
      */
-#define HB_MUX_MASK      0xFF0001
+#define HB_MUX_MASK      0xFF1001
 #define HB_MUX_INVALID   0x000000
 #define HB_MUX_MP4V2     0x010000
 #define HB_MUX_AV_MP4    0x020000
 #define HB_MUX_MASK_MP4  0x030000
+#define HB_MUX_AV_MOV    0x001000
+#define HB_MUX_MASK_MOV  0x001000
 #define HB_MUX_LIBMKV    0x100000
 #define HB_MUX_AV_MKV    0x200000
 #define HB_MUX_AV_WEBM   0x400000
 #define HB_MUX_MASK_MKV  0x300000
-#define HB_MUX_MASK_AV   0x620000
 #define HB_MUX_MASK_WEBM 0x400000
+#define HB_MUX_MASK_AV   0x621000
+
+#define HB_MUX_MASK_ISOBFF_FAMILY (HB_MUX_MASK_MP4 | HB_MUX_MASK_MOV)
 
 /* default muxer for each container */
 #define HB_MUX_MP4       HB_MUX_AV_MP4
+#define HB_MUX_MOV       HB_MUX_AV_MOV
 #define HB_MUX_MKV       HB_MUX_AV_MKV
 #define HB_MUX_WEBM      HB_MUX_AV_WEBM
 
@@ -857,20 +987,19 @@ struct hb_job_s
                                         //  initially (for frame accurate positioning
                                         //  to non-I frames).
 
-    // QSV-specific settings
-    struct
-    {
-        int decode;
-        int async_depth;
-#if HB_PROJECT_FEATURE_QSV
-        hb_qsv_context *ctx;
-#endif
-    } qsv;
-
     int hw_decode;
+    int hw_device_index;
+    int hw_device_async_depth;
+
     int keep_duplicate_titles;
 
 #ifdef __LIBHB__
+
+#if HB_PROJECT_FEATURE_QSV
+    // QSV-specific settings
+    hb_qsv_context_t *qsv_ctx;
+#endif
+
     /* Internal data */
     hb_handle_t   * h;
     volatile hb_error_code * done_error;
@@ -897,6 +1026,7 @@ struct hb_job_s
                                        // this.  E.g. sync and decsrtsub
 
     void           *hw_device_ctx;
+    hb_hwaccel_t   *hw_accel;
     int             hw_pix_fmt;
 #endif
 };
@@ -905,7 +1035,7 @@ struct hb_job_s
 /* Audio Codecs: Update win/CS/HandBrake.Interop/Interop/HbLib/NativeConstants.cs when changing these consts */
 #define HB_ACODEC_INVALID   0x00000000
 #define HB_ACODEC_NONE      0x00000001
-#define HB_ACODEC_MASK      0x0FFFFF81
+#define HB_ACODEC_MASK      0x1FFFFF87
 #define HB_ACODEC_FFALAC    0x00000080
 #define HB_ACODEC_FFALAC24  0x00000100
 #define HB_ACODEC_LAME      0x00000200
@@ -927,9 +1057,12 @@ struct hb_job_s
 #define HB_ACODEC_FFEAC3    0x01000000
 #define HB_ACODEC_FFTRUEHD  0x02000000
 #define HB_ACODEC_OPUS      0x04000000
-#define HB_ACODEC_FF_MASK   0x0FFF2D80
+#define HB_ACODEC_PCM       0x10000000
+#define HB_ACODEC_FFPCM16   0x00000002
+#define HB_ACODEC_FFPCM24   0x00000004
+#define HB_ACODEC_FF_MASK   0x1FFF2D86
 #define HB_ACODEC_PASS_FLAG 0x40000000
-#define HB_ACODEC_PASS_MASK   (HB_ACODEC_AC3 | HB_ACODEC_DCA | HB_ACODEC_DCA_HD | HB_ACODEC_FFAAC | HB_ACODEC_FFEAC3 | HB_ACODEC_FFALAC | HB_ACODEC_FFFLAC | HB_ACODEC_MP2 | HB_ACODEC_MP3 | HB_ACODEC_FFTRUEHD | HB_ACODEC_VORBIS | HB_ACODEC_OPUS)
+#define HB_ACODEC_PASS_MASK   (HB_ACODEC_AC3 | HB_ACODEC_DCA | HB_ACODEC_DCA_HD | HB_ACODEC_FFAAC | HB_ACODEC_FFEAC3 | HB_ACODEC_FFALAC | HB_ACODEC_FFFLAC | HB_ACODEC_MP2 | HB_ACODEC_MP3 | HB_ACODEC_FFTRUEHD | HB_ACODEC_VORBIS | HB_ACODEC_OPUS | HB_ACODEC_PCM)
 #define HB_ACODEC_AUTO_PASS   (HB_ACODEC_PASS_FLAG | HB_ACODEC_PASS_MASK)
 #define HB_ACODEC_ANY         (HB_ACODEC_PASS_FLAG | HB_ACODEC_MASK)
 #define HB_ACODEC_AAC_PASS    (HB_ACODEC_PASS_FLAG | HB_ACODEC_FFAAC)
@@ -944,6 +1077,7 @@ struct hb_job_s
 #define HB_ACODEC_TRUEHD_PASS (HB_ACODEC_PASS_FLAG | HB_ACODEC_FFTRUEHD)
 #define HB_ACODEC_VORBIS_PASS (HB_ACODEC_PASS_FLAG | HB_ACODEC_VORBIS)
 #define HB_ACODEC_OPUS_PASS   (HB_ACODEC_PASS_FLAG | HB_ACODEC_OPUS)
+#define HB_ACODEC_PCM_PASS    (HB_ACODEC_PASS_FLAG | HB_ACODEC_PCM)
 
 #define HB_SUBSTREAM_BD_TRUEHD  0x72
 #define HB_SUBSTREAM_BD_AC3     0x76
@@ -992,10 +1126,13 @@ struct hb_audio_config_s
             HB_AMIXDOWN_STEREO,
             HB_AMIXDOWN_DOLBY,
             HB_AMIXDOWN_DOLBYPLII,
+            HB_AMIXDOWN_3POINT0,
+            HB_AMIXDOWN_4POINT0,
+            HB_AMIXDOWN_QUAD,
             HB_AMIXDOWN_5POINT1,
             HB_AMIXDOWN_6POINT1,
             HB_AMIXDOWN_7POINT1,
-            HB_AMIXDOWN_5_2_LFE,
+            HB_AMIXDOWN_7POINT1_SDDS,
         } mixdown; /* Audio mixdown */
         int      track; /* Output track number */
         uint32_t codec; /* Output audio codec */
@@ -1009,6 +1146,8 @@ struct hb_audio_config_s
         int      normalize_mix_level; /* mix level normalization (boolean) */
         int      dither_method; /* dither algorithm */
         const char * name; /* Output track name */
+        hb_list_t  * list_filter; /* List of hb_filter_object_t */
+        PRIVATE hb_channel_layout_t *ch_layout; /* Output channel layout, set by the audio filter chain */
     } out;
 
     /* Input */
@@ -1028,8 +1167,7 @@ struct hb_audio_config_s
         PRIVATE int samples_per_frame; /* Number of samples per frame */
         PRIVATE int bitrate; /* Input bitrate (bps) */
         PRIVATE int matrix_encoding; /* Source matrix encoding mode, set by the audio decoder */
-        PRIVATE uint64_t channel_layout; /* Source channel layout, set by the audio decoder */
-        PRIVATE hb_chan_map_t * channel_map; /* Source channel map, set by the audio decoder */
+        PRIVATE hb_channel_layout_t *ch_layout; /* Source channel layout, set by the audio decoder */
         PRIVATE int encoder_delay; /* Encoder delay in samples.
                                     * These samples should be dropped
                                     * when decoding */
@@ -1062,6 +1200,7 @@ struct hb_audio_s
         hb_fifo_t * fifo_in;   /* AC3/MPEG/LPCM ES */
         hb_fifo_t * fifo_raw;  /* Raw audio */
         hb_fifo_t * fifo_sync; /* Resampled, synced raw audio */
+        hb_fifo_t * fifo_render;/* Filtered raw audio */
         hb_fifo_t * fifo_out;  /* MP3/AAC/Vorbis ES */
 
         hb_mux_data_t * mux_data;
@@ -1268,6 +1407,9 @@ struct hb_title_s
 
     int             hdr_10_plus;
 
+    hb_spherical_mapping_t spherical_mapping;
+    hb_stereo_3d_t stereo_3d;
+
     hb_rational_t   vrate;
     int             crop[4];
     int             loose_crop[4];
@@ -1288,14 +1430,15 @@ struct hb_title_s
 
     // additional supported video decoders (e.g. HW-accelerated implementations)
     int           video_decode_support;
-#define HB_DECODE_SUPPORT_SW             0x01 // software (libavcodec)
-#define HB_DECODE_SUPPORT_QSV            0x02 // Intel Quick Sync Video
-#define HB_DECODE_SUPPORT_NVDEC          0x04
-#define HB_DECODE_SUPPORT_VIDEOTOOLBOX   0x08
-#define HB_DECODE_SUPPORT_MF             0x10 // Windows Media Foundation
+#define HB_DECODE_SW             0x01 // software (libavcodec)
+#define HB_DECODE_QSV            0x02 // Intel Quick Sync Video
+#define HB_DECODE_NVDEC          0x04
+#define HB_DECODE_VIDEOTOOLBOX   0x08
+#define HB_DECODE_MF             0x10 // Windows Media Foundation
+#define HB_DECODE_AMFDEC         0x20 // AMD Advance Media Framework
 
-#define HB_DECODE_SUPPORT_HWACCEL        (HB_DECODE_SUPPORT_NVDEC | HB_DECODE_SUPPORT_VIDEOTOOLBOX | HB_DECODE_SUPPORT_QSV | HB_DECODE_SUPPORT_MF)
-#define HB_DECODE_SUPPORT_FORCE_HW       0x80000000
+#define HB_DECODE_HWACCEL        (HB_DECODE_NVDEC | HB_DECODE_VIDEOTOOLBOX | HB_DECODE_QSV | HB_DECODE_MF | HB_DECODE_AMFDEC)
+#define HB_DECODE_FORCE_HW       0x80000000
 
     hb_metadata_t * metadata;
 
@@ -1391,8 +1534,7 @@ typedef struct hb_work_info_s
         };
         struct
         {    // info only valid for audio decoders
-            uint64_t channel_layout;
-            hb_chan_map_t * channel_map;
+            hb_channel_layout_t *ch_layout;
             int samples_per_frame;
             int sample_bit_depth;
             int matrix_encoding;
@@ -1445,6 +1587,7 @@ struct hb_work_object_s
     int                 frame_count;
     int                 codec_param;
     void              * hw_device_ctx;
+    hb_hwaccel_t      * hw_accel;
     hb_title_t        * title;
 
     hb_work_object_t  * next;
@@ -1491,8 +1634,11 @@ extern hb_work_object_t hb_reader;
 typedef struct hb_filter_init_s
 {
     hb_job_t      * job;
+
     int             pix_fmt;
     int             hw_pix_fmt;
+    void          * hw_frames_ctx;
+
     int             color_prim;
     int             color_transfer;
     int             color_matrix;
@@ -1500,12 +1646,20 @@ typedef struct hb_filter_init_s
     int             chroma_location;
     hb_geometry_t   geometry;
     int             crop[4];
+    int             grayscale;
+
     hb_rational_t   vrate;
     int             cfr;
-    int             grayscale;
     hb_rational_t   time_base;
-    void          * hw_frames_ctx;
+
+    int             samplerate;
+    int             sample_fmt;
+    AVChannelLayout ch_layout;
+
 } hb_filter_init_t;
+
+void hb_filter_init_copy(hb_filter_init_t *dst, hb_filter_init_t *src);
+void hb_filter_init_close(hb_filter_init_t *init);
 
 typedef struct hb_filter_info_s
 {
@@ -1520,6 +1674,7 @@ struct hb_filter_object_s
     int                   skip;
     int                   aliased;
     char                * name;
+    char                * short_name;
     hb_dict_t           * settings;
 
 #ifdef __LIBHB__
@@ -1555,13 +1710,28 @@ struct hb_filter_object_s
 #endif
 };
 
+enum
+{
+    HB_AUDIO_FILTER_INVALID = 0,
+    HB_AUDIO_FILTER_FIRST = 10001,
+
+    HB_AUDIO_FILTER_ACOMPRESSOR,
+    HB_AUDIO_FILTER_AGATE,
+
+    // Finally filters that don't care what order they are in,
+    // except that they must be after the above filters
+    HB_AUDIO_FILTER_AVFILTER,
+
+    HB_AUDIO_FILTER_LAST
+};
+
 // Update win/CS/HandBrake.Interop/HandBrakeInterop/HbLib/hb_filter_ids.cs when changing this enum
 enum
 {
     HB_FILTER_INVALID = 0,
     HB_FILTER_FIRST = 1,
 
-    HB_FILTER_PRE_VT,
+    HB_FILTER_ADAPTER_VT,
     // First, filters that may change the framerate (drop or dup frames)
     HB_FILTER_DETELECINE,
     HB_FILTER_COMB_DETECT,
@@ -1574,8 +1744,10 @@ enum
     HB_FILTER_VFR,
     // Filters that must operate on the original source image are next
     HB_FILTER_DEBLOCK,
+    HB_FILTER_DEBAND,
     HB_FILTER_DENOISE,
     HB_FILTER_HQDN3D = HB_FILTER_DENOISE,
+    HB_FILTER_BM3D,
     HB_FILTER_NLMEANS,
     HB_FILTER_CHROMA_SMOOTH,
     HB_FILTER_CHROMA_SMOOTH_VT,
@@ -1621,6 +1793,9 @@ char               * hb_filter_settings_string(int filter_id,
 char               * hb_filter_settings_string_json(int filter_id,
                                                     const char * json);
 
+int                  hb_filter_get_from_name(const char *name);
+const char *         hb_filter_get_name(int filter_id);
+const char *         hb_filter_get_short_name(int filter_id);
 struct hb_motion_metric_object_s
 {
     char                * name;
@@ -1708,7 +1883,6 @@ int hb_get_color_matrix(int colorspace, hb_geometry_t geometry);
 int hb_get_color_range(int color_range);
 int hb_get_chroma_sub_sample(int format, int *h_shift, int *v_shift);
 int hb_get_best_pix_fmt(hb_job_t * job);
-int hb_get_best_hw_pix_fmt(hb_job_t * job);
 
 #define HB_NEG_FLOAT_REG "(([-])?(([0-9]+([.,][0-9]+)?)|([.,][0-9]+))"
 #define HB_FLOAT_REG     "(([0-9]+([.,][0-9]+)?)|([.,][0-9]+))"

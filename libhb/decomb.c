@@ -1,6 +1,6 @@
 /* decomb.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -184,6 +184,7 @@ hb_filter_object_t hb_filter_decomb =
     .id                = HB_FILTER_DECOMB,
     .enforce_order     = 1,
     .name              = "Decomb",
+    .short_name        = "decomb",
     .settings          = NULL,
     .init              = hb_decomb_init,
     .work              = hb_decomb_work,
@@ -278,6 +279,12 @@ static int hb_decomb_init(hb_filter_object_t *filter,
     // Each segment must begin on the even "parity" row.
     // I.e. each segment of each plane must begin on an even row.
     pv->segment_height[0] = (height / pv->cpu_count) & ~3;
+    // Check segment height to be at least 16
+    if (pv->segment_height[0] < 16)
+    {
+        pv->segment_height[0] = 16;
+    }
+
     pv->segment_height[1] = hb_image_height(init->pix_fmt, pv->segment_height[0], 1);
     pv->segment_height[2] = hb_image_height(init->pix_fmt, pv->segment_height[0], 2);
 
@@ -325,6 +332,12 @@ static int hb_decomb_init(hb_filter_object_t *filter,
 
     init_crop_table((void **)&pv->crop_table, pv->max_value);
     eedi2_init_limlut((void **)&pv->eedi_limlut, pv->depth);
+
+    // Adjust cpu_count to the appropriate value so it will not use all CPU cores
+    if ((height / pv->segment_height[0]) < pv->cpu_count)
+    {
+        pv->cpu_count = (height + (pv->segment_height[0] - 1)) / pv->segment_height[0];
+    }
 
     // Setup yadif taskset.
     pv->yadif_arguments = malloc(sizeof(yadif_arguments_t) * pv->cpu_count);

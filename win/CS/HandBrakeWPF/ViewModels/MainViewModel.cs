@@ -116,7 +116,6 @@ namespace HandBrakeWPF.ViewModels
             IStaticPreviewViewModel staticPreviewViewModel,
             IQueueViewModel queueViewModel,
             IMetaDataViewModel metaDataViewModel,
-            IPresetManagerViewModel presetManagerViewModel,
             INotifyIconService notifyIconService,
             ISystemService systemService,
             ILog logService,
@@ -144,7 +143,6 @@ namespace HandBrakeWPF.ViewModels
             this.SubtitleViewModel = subtitlesViewModel;
             this.ChaptersViewModel = chaptersViewModel;
             this.StaticPreviewViewModel = staticPreviewViewModel;
-            this.PresetManagerViewModel = presetManagerViewModel;
 
             // Setup Properties
             this.WindowTitle = Resources.HandBrake_Title;
@@ -231,8 +229,6 @@ namespace HandBrakeWPF.ViewModels
         public IMetaDataViewModel MetaDataViewModel { get; set; }
 
         public ISummaryViewModel SummaryViewModel { get; set; }
-
-        public IPresetManagerViewModel PresetManagerViewModel { get; set; }
 
         public int SelectedTab { get; set; }
 
@@ -427,7 +423,7 @@ namespace HandBrakeWPF.ViewModels
             }
         }
 
-        public IEnumerable<OutputFormat> OutputFormats => new List<OutputFormat> { OutputFormat.Mp4, OutputFormat.Mkv, OutputFormat.WebM };
+        public IEnumerable<OutputFormat> OutputFormats => new List<OutputFormat> { OutputFormat.Mp4, OutputFormat.Mov, OutputFormat.Mkv, OutputFormat.WebM };
 
         public string Destination
         {
@@ -474,6 +470,9 @@ namespace HandBrakeWPF.ViewModels
                             case ".mp4":
                             case ".m4v":
                                 this.SummaryViewModel.SetContainer(OutputFormat.Mp4);
+                                break;
+                            case ".mov":
+                                this.SummaryViewModel.SetContainer(OutputFormat.Mov);
                                 break;
                             case ".webm":
                                 this.SummaryViewModel.SetContainer(OutputFormat.WebM);
@@ -850,6 +849,8 @@ namespace HandBrakeWPF.ViewModels
 
         public bool IsPresetDescriptionVisible { get; set; }
 
+        public bool IsMenuStylePresetDisplayed { get; set; }
+
         public bool IsLegacyMenuShown { get; set; }
 
         public string ShowHideMenuText => this.IsLegacyMenuShown ? Resources.MainView_HideClassicMenu : Resources.MainView_ShowClassicMenu;
@@ -930,6 +931,11 @@ namespace HandBrakeWPF.ViewModels
             this.IsLegacyMenuShown = this.userSettingService.GetUserSetting<bool>(UserSettingConstants.IsLegacyMenuShown);
             this.NotifyOfPropertyChange(() => this.IsLegacyMenuShown);
             this.NotifyOfPropertyChange(() => this.ShowHideMenuText);
+
+            // Preset UI
+            PresetUiType uiType = this.userSettingService.GetUserSetting<PresetUiType>(UserSettingConstants.PresetUiType);
+            this.IsMenuStylePresetDisplayed = uiType == PresetUiType.Menu;
+            this.NotifyOfPropertyChange(() => IsMenuStylePresetDisplayed);
         }
 
         public void Shutdown()
@@ -1005,21 +1011,7 @@ namespace HandBrakeWPF.ViewModels
             }
             else if (this.StaticPreviewViewModel.IsOpen)
             {
-                WindowHelper.ShowWindow<IPresetManagerViewModel, StaticPreviewView>(this.windowManager);
-            }
-        }
-
-        public void OpenPresetWindow()
-        {
-            if (!this.PresetManagerViewModel.IsOpen)
-            {
-                this.PresetManagerViewModel.IsOpen = true;
-                this.PresetManagerViewModel.SetupWindow(this.HandleManagePresetChanges);
-                this.windowManager.ShowWindow<PresetManagerView>(this.PresetManagerViewModel);
-            }
-            else if (this.PresetManagerViewModel.IsOpen)
-            {
-                WindowHelper.ShowWindow<IPresetManagerViewModel, PresetManagerView>(this.windowManager);
+                WindowHelper.ShowWindow<IStaticPreviewViewModel, StaticPreviewView>(this.windowManager);
             }
         }
 
@@ -1387,7 +1379,7 @@ namespace HandBrakeWPF.ViewModels
             if (this.queueProcessor.Count != 0 || this.queueProcessor.IsPaused)
             {
                 this.NotifyOfPropertyChange(() => this.IsEncoding);
-                this.queueProcessor.Start();
+                this.QueueViewModel.StartQueue(); // Provides user checks.
                 return;
             }
 
@@ -1408,7 +1400,8 @@ namespace HandBrakeWPF.ViewModels
                 }
 
                 this.NotifyOfPropertyChange(() => this.IsEncoding);
-                this.queueProcessor.Start();               
+
+                this.QueueViewModel.StartQueue(); // Provides user checks.
             }
             else
             {
@@ -1632,7 +1625,7 @@ namespace HandBrakeWPF.ViewModels
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
-                Filter = "mp4|*.mp4;*.m4v|mkv|*.mkv|webm|*.webm", 
+                Filter = "mp4|*.mp4;*.m4v|mov|*.mov|mkv|*.mkv|webm|*.webm", 
                 CheckPathExists = true, 
                 AddExtension = true, 
                 DefaultExt = ".mp4",
@@ -1644,12 +1637,14 @@ namespace HandBrakeWPF.ViewModels
 
             string extension = Path.GetExtension(this.CurrentTask.Destination);
 
-            saveFileDialog.FilterIndex = !string.IsNullOrEmpty(this.CurrentTask.Destination)
-                                         && !string.IsNullOrEmpty(extension)
-                                             ? (extension == ".mp4" || extension == ".m4v" ? 1 : 2)
-                                             : (this.CurrentTask.OutputFormat == OutputFormat.Mkv 
-                                                 ? 2 
-                                                 : (this.CurrentTask.OutputFormat == OutputFormat.WebM ? 3 : 0));
+            saveFileDialog.FilterIndex = this.CurrentTask.OutputFormat switch
+            {
+                OutputFormat.Mp4 => 1,
+                OutputFormat.Mov => 2,
+                OutputFormat.Mkv => 3,
+                OutputFormat.WebM => 4,
+                _ => 0
+            };
 
             string mruDir = this.GetMru(Constants.FileSaveMru);
             if (!string.IsNullOrEmpty(mruDir) && Directory.Exists(mruDir))
@@ -1686,6 +1681,9 @@ namespace HandBrakeWPF.ViewModels
                         case ".mp4":
                         case ".m4v":
                             this.SummaryViewModel.SetContainer(OutputFormat.Mp4);
+                            break;
+                        case ".mov":
+                            this.SummaryViewModel.SetContainer(OutputFormat.Mov);
                             break;
                         case ".webm":
                             this.SummaryViewModel.SetContainer(OutputFormat.WebM);
@@ -2297,17 +2295,24 @@ namespace HandBrakeWPF.ViewModels
             {
                 case PointToPointMode.Chapters:
                     output = this.SelectedTitle.CalculateDuration(this.SelectedStartPoint, this.SelectedEndPoint);
-                    return string.Format("{0:00}:{1:00}:{2:00}", output.Hours, output.Minutes, output.Seconds);
+                    return FormatDuration(output);
                 case PointToPointMode.Seconds:
                     output = TimeSpan.FromSeconds(startEndDuration);
-                    return string.Format("{0:00}:{1:00}:{2:00}", output.Hours, output.Minutes, output.Seconds);
+                    return FormatDuration(output);
                 case PointToPointMode.Frames:
                     startEndDuration = startEndDuration / selectedTitle.Fps;
                     output = TimeSpan.FromSeconds(Math.Round(startEndDuration, 2));
-                    return string.Format("{0:00}:{1:00}:{2:00}", output.Hours, output.Minutes, output.Seconds);
+                    return FormatDuration(output);
             }
 
             return "--:--:--";
+        }
+
+        private static string FormatDuration(TimeSpan ts)
+        {
+            return ts.Days > 0
+                ? string.Format("{0}:{1:00}:{2:00}:{3:00}", ts.Days, ts.Hours, ts.Minutes, ts.Seconds)
+                : string.Format("{0:00}:{1:00}:{2:00}", ts.Hours, ts.Minutes, ts.Seconds);
         }
 
         private void HandleUpdateCheckResults(UpdateCheckInformation information)
@@ -2563,6 +2568,12 @@ namespace HandBrakeWPF.ViewModels
                     this.NotifyOfPropertyChange(() => this.ShowAddSelectionToQueue);
                     this.NotifyOfPropertyChange(() => this.ShowAddAllMenuName);
                     this.NotifyOfPropertyChange(() => this.ShowAddSelectionMenuName);
+                    break;
+
+                case UserSettingConstants.PresetUiType:
+                    PresetUiType uiType = this.userSettingService.GetUserSetting<PresetUiType>(UserSettingConstants.PresetUiType);
+                    this.IsMenuStylePresetDisplayed = uiType == PresetUiType.Menu;
+                    this.NotifyOfPropertyChange(() => IsMenuStylePresetDisplayed);
                     break;
             }
         }

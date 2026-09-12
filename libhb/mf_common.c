@@ -1,6 +1,6 @@
 /* mf_common.c
  *
- * Copyright (c) 2003-2025 HandBrake Team
+ * Copyright (c) 2003-2026 HandBrake Team
  * This file is part of the HandBrake source code.
  * Homepage: <http://handbrake.fr/>.
  * It may be used under the terms of the GNU General Public License v2.
@@ -100,7 +100,7 @@ int hb_is_mf_encoder_available(const GUID* pSubType)
 
 int hb_check_mf_available()
 {
-    if (is_hardware_disabled())
+    if (hb_is_hardware_disabled())
     {
         return 0;
     }
@@ -205,3 +205,101 @@ int hb_mf_av1_available()
     return is_mf_av1_available;
 }
 
+#if HB_PROJECT_FEATURE_MF
+int hb_directx_available()
+{
+    if (hb_is_hardware_disabled())
+    {
+        return 0;
+    }
+    enum AVHWDeviceType hw_type = av_hwdevice_find_type_by_name("d3d11va");
+    if (hw_type == AV_HWDEVICE_TYPE_NONE)
+    {
+        hb_log("directx: not available on this system");
+        return 0;
+    }
+
+    hb_log("directx: is available");
+    return 1;
+}
+
+int hb_mf_are_filters_supported(hb_list_t *filters)
+{
+    if (filters == NULL || hb_list_count(filters) == 0)
+    {
+        hb_log("D3D11: No filters to process");
+        return 1;
+    }
+
+    for (int i = 0; i < hb_list_count(filters); i++)
+    {
+        hb_filter_object_t *filter = hb_list_item(filters, i);
+        if (filter == NULL)
+        {
+            hb_log("D3D11: Null filter object encountered");
+            return 0;
+        }
+
+        switch (filter->id)
+        {
+            case HB_FILTER_CROP_SCALE:
+                hb_log("D3D11: Scaling filter supported");
+                break;
+            case HB_FILTER_FORMAT:
+                hb_log("D3D11: Format supported");
+                break;
+
+            case HB_FILTER_AVFILTER:
+                hb_log("D3D11: AVFilter filter supported");
+                break;
+
+            case HB_FILTER_VFR:
+                {
+                    int mode = hb_dict_get_int(filter->settings, "mode");
+                    hb_log("Checking VFR mode: %d", mode);
+                    if (mode == 2)
+                    {
+                        hb_log("D3D11: Unsupported VFR mode %d detected", mode);
+                        return 0;
+                    }
+                    hb_log("D3D11: VFR mode %d supported", mode);
+                    continue;
+                }
+
+            default:
+                hb_log("D3D11: Unsupported filter %s (id: %d)", filter->name, filter->id);
+                return 0;
+        }
+    }
+
+    hb_log("D3D11: All filters are supported");
+    return 1;
+}
+
+static const int mf_encoders[] =
+{
+    HB_VCODEC_FFMPEG_MF_H264,
+    HB_VCODEC_FFMPEG_MF_H265,
+    HB_VCODEC_FFMPEG_MF_AV1,
+    HB_VCODEC_INVALID
+};
+
+hb_hwaccel_t hb_hwaccel_mf =
+{
+    .id         = HB_DECODE_MF,
+    .name       = "mf hwaccel",
+    .encoders   = mf_encoders,
+    .type       = AV_HWDEVICE_TYPE_D3D11VA,
+    .hw_pix_fmt = AV_PIX_FMT_D3D11,
+    .can_filter = hb_mf_are_filters_supported,
+    .caps       = HB_HWACCEL_CAP_SCAN | HB_HWACCEL_CAP_FORMAT_REQUIRED
+};
+
+#else // HB_PROJECT_FEATURE_MF
+
+int hb_directx_available()
+{
+    return -1;
+}
+
+#endif // HB_PROJECT_FEATURE_MF

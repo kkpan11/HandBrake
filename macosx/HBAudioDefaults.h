@@ -17,6 +17,12 @@ typedef NS_ENUM(NSUInteger, HBAudioTrackSelectionBehavior) {
     HBAudioTrackSelectionBehaviorAll,
 };
 
+typedef NS_ENUM(NSUInteger, HBAudioTrackAutomaticNamingBehavior) {
+    HBAudioTrackAutomaticNamingBehaviorNone,
+    HBAudioTrackAutomaticNamingBehaviorUnnamed,
+    HBAudioTrackAutomaticNamingBehaviorAll,
+};
+
 /**
  *  HBAudioSettings
  *  Stores the audio defaults (selection behavior) settings.
@@ -44,11 +50,15 @@ typedef NS_ENUM(NSUInteger, HBAudioTrackSelectionBehavior) {
 @property(nonatomic, readwrite) BOOL allowTrueHDPassthru;
 @property(nonatomic, readwrite) BOOL allowALACPassthru;
 @property(nonatomic, readwrite) BOOL allowFLACPassthru;
+@property(nonatomic, readwrite) BOOL allowPCMPassthru;
 
 @property(nonatomic, readwrite) int encoderFallback;
 @property(nonatomic, readwrite) BOOL secondaryEncoderMode;
 
 @property(nonatomic, readonly) NSArray<NSString *> *audioEncoderFallbacks;
+
+@property(nonatomic, readwrite) BOOL passthruName;
+@property(nonatomic, readwrite) HBAudioTrackAutomaticNamingBehavior automaticNamingBehavior;
 
 - (void)validateEncoderFallbackForVideoContainer:(int)container;
 

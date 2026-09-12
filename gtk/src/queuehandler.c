@@ -1,6 +1,6 @@
 /* queuehandler.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -1601,25 +1601,25 @@ void ghb_low_disk_check (signal_user_data_t *ud)
         return;
     }
     // limit is in GB
-    free_limit = ghb_dict_get_int(ud->prefs, "DiskFreeLimitGB") * 1024;
+    free_limit = ghb_dict_get_int(ud->prefs, "DiskFreeLimitGB") * 1000 * 1000 * 1000;
     if (free_size > free_limit)
     {
         return;
     }
 
     ghb_pause_queue();
-    ghb_send_notification(GHB_NOTIFY_PAUSED_LOW_DISK_SPACE,
-                          free_size / 1024, ud);
+    ghb_send_notification(GHB_NOTIFY_PAUSED_LOW_DISK_SPACE, free_size, ud);
     dest      = ghb_dict_get_string(settings, "destination");
     hb_window = GTK_WINDOW(ghb_builder_widget("hb_window"));
     dialog    = gtk_message_dialog_new(hb_window, GTK_DIALOG_MODAL,
                     GTK_MESSAGE_WARNING, GTK_BUTTONS_NONE,
                     _("Low Disk Space: Encoding Paused"));
+    g_autofree char *size_str = ghb_format_pretty_size(free_size);
     gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-        _("The destination filesystem is almost full: %"PRId64" MB free.\n"
+        _("The destination filesystem is almost full: %s free.\n"
           "Destination: %s\n"
           "Encode may be incomplete if you proceed."),
-        free_size / (1024 * 1024), dest);
+        size_str, dest);
     gtk_dialog_add_buttons( GTK_DIALOG(dialog),
                            _("Resume, I've fixed the problem"), 1,
                            _("Resume, Don't tell me again"), 2,
@@ -1661,6 +1661,25 @@ queue_remove_response (GtkWidget *dialog, int response, GhbQueueRow *queue_row)
     int queue_remove_unique_id = ghb_dict_get_int(uiDict, "job_unique_id");
     int status = ghb_dict_get_int(uiDict, "job_status");
 
+    // Update UI
+    GtkListBox *lb = GTK_LIST_BOX(ghb_builder_widget("queue_list"));
+    GtkListBoxRow *selected_row = gtk_list_box_get_selected_row(lb);
+    int selected_index = gtk_list_box_row_get_index(selected_row);
+    if (selected_row == row)
+    {
+        // Select the row after the row to delete
+        selected_row = gtk_list_box_get_row_at_index(lb, selected_index + 1);
+    }
+    if (selected_row == NULL)
+    {
+        // The row to delete is the last one, try the one before it
+        selected_row = gtk_list_box_get_row_at_index(lb, selected_index - 1);
+    }
+    if (selected_row != NULL)
+    {
+        gtk_list_box_select_row(lb, selected_row);
+    }
+    gtk_list_box_remove(lb, GTK_WIDGET(row));
     ghb_array_remove(ud->queue, queue_remove_index);
 
     if (status == GHB_QUEUE_RUNNING)
@@ -1668,19 +1687,6 @@ queue_remove_response (GtkWidget *dialog, int response, GhbQueueRow *queue_row)
         ghb_stop_queue();
         ghb_set_cancel_status(GHB_CANCEL_ALL);
         ghb_remove_job(queue_remove_unique_id);
-    }
-
-    // Update UI
-    GtkListBox *lb = GTK_LIST_BOX(ghb_builder_widget("queue_list"));
-    gtk_list_box_remove(lb, GTK_WIDGET(row));
-
-    if (queue_remove_index >= 1)
-    {
-        row = gtk_list_box_get_row_at_index(lb, queue_remove_index - 1);
-    }
-    if (row != NULL)
-    {
-        gtk_list_box_select_row(lb, row);
     }
 }
 
@@ -1696,7 +1702,7 @@ queue_remove_dialog_show (GhbQueueRow *row)
                 _("Cancel and Remove"), NULL, NULL, _("Continue Encoding"));
 
     g_signal_connect(dialog, "response", G_CALLBACK(queue_remove_response), row);
-    gtk_widget_show(dialog);
+    gtk_widget_set_visible(dialog, TRUE);
 }
 
 static void
@@ -2070,13 +2076,6 @@ queue_show_sidebar_action_cb (GSimpleAction *action, GVariant *param,
     g_simple_action_set_state(action, param);
 }
 
-G_MODULE_EXPORT gboolean
-queue_window_delete_cb (GtkWidget *xwidget, gpointer data)
-{
-    gtk_widget_set_visible(xwidget, FALSE);
-    return TRUE;
-}
-
 GhbValue *ghb_queue_edit_settings = NULL;
 
 G_MODULE_EXPORT void
@@ -2141,68 +2140,6 @@ queue_open_clicked_cb (GtkWidget *widget, signal_user_data_t *ud)
     open_queue_file(ud);
 }
 
-#if GTK_CHECK_VERSION(4, 10, 0)
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-
-void
-open_file_finish (GtkFileLauncher *launcher, GAsyncResult *result, gpointer data)
-{
-    g_autoptr(GError) error = NULL;
-    if (!gtk_file_launcher_launch_finish(launcher, result, &error))
-    {
-        g_warning("Unable to open containing folder: %s", error->message);
-    }
-    g_object_unref(launcher);
-}
-
-void
-open_folder_finish (GtkFileLauncher *launcher, GAsyncResult *result,
-                    signal_user_data_t *ud)
-{
-    g_autoptr(GError) error = NULL;
-    if (!gtk_file_launcher_open_containing_folder_finish(launcher, result, &error))
-    {
-        g_warning("Unable to open containing folder: %s", error->message);
-    }
-    g_object_unref(launcher);
-}
-
-void
-ghb_file_open_containing_folder (const char *path)
-{
-    GtkWindow *parent = GTK_WINDOW(ghb_builder_widget("hb_window"));
-    if (g_file_test(path, G_FILE_TEST_EXISTS))
-    {
-        g_autoptr(GFile) file = g_file_new_for_path(path);
-        GtkFileLauncher *launcher = gtk_file_launcher_new(file);
-        gtk_file_launcher_open_containing_folder(launcher, parent, NULL,
-                (GAsyncReadyCallback) open_folder_finish, NULL);
-    }
-    else
-    {
-        g_autofree char *dir = g_path_get_dirname(path);
-        g_autoptr(GFile) file = g_file_new_for_path(dir);
-        GtkFileLauncher *launcher = gtk_file_launcher_new(file);
-        gtk_file_launcher_launch(launcher, parent, NULL,
-                (GAsyncReadyCallback) open_file_finish, NULL);
-    }
-}
-
-G_GNUC_END_IGNORE_DEPRECATIONS
-#else
-void
-ghb_file_open_containing_folder (const char *path)
-{
-    char *dir = g_path_get_dirname(path);
-    GString *str = g_string_new(NULL);
-    g_string_printf(str, "file://%s", dir);
-    char *uri = g_string_free(str, FALSE);
-    ghb_browse_uri(uri);
-    g_free(uri);
-    g_free(dir);
-}
-#endif
-
 G_MODULE_EXPORT void
 queue_open_source_action_cb (GSimpleAction *action, GVariant *param,
                              signal_user_data_t *ud)
@@ -2225,7 +2162,8 @@ queue_open_source_action_cb (GSimpleAction *action, GVariant *param,
         queueDict = ghb_array_get(ud->queue, index);
         titleDict = ghb_dict_get(queueDict, "Title");
         path      = ghb_dict_get_string(titleDict, "Path");
-        ghb_file_open_containing_folder(path);
+        g_autoptr(GFile) file = g_file_new_for_path(path);    
+        ghb_file_open_containing_folder(file);
     }
 }
 
@@ -2251,7 +2189,8 @@ queue_open_dest_action_cb (GSimpleAction *action, GVariant *param,
         queueDict = ghb_array_get(ud->queue, index);
         uiDict    = ghb_dict_get(queueDict, "uiSettings");
         path      = ghb_dict_get_string(uiDict, "destination");
-        ghb_file_open_containing_folder(path);
+        g_autoptr(GFile) file = g_file_new_for_path(path);    
+        ghb_file_open_containing_folder(file);
     }
 }
 
@@ -2263,9 +2202,7 @@ queue_open_log_action_cb (GSimpleAction *action, GVariant *param,
     GtkListBoxRow * row;
     gint            index;
     GhbValue      * queueDict, * uiDict;
-    GString       * str;
     const char    * path;
-    char          * uri;
 
     lb  = GTK_LIST_BOX(ghb_builder_widget("queue_list"));
     row = gtk_list_box_get_selected_row(lb);
@@ -2283,11 +2220,8 @@ queue_open_log_action_cb (GSimpleAction *action, GVariant *param,
         {
             return;
         }
-        str       = g_string_new(NULL);
-        g_string_printf(str, "file://%s", path);
-        uri       = g_string_free(str, FALSE);
-        ghb_browse_uri(uri);
-        g_free(uri);
+        g_autoptr(GFile) file = g_file_new_for_path(path);
+        ghb_file_open(file);
     }
 }
 
@@ -2317,9 +2251,11 @@ queue_open_log_dir_action_cb (GSimpleAction *action, GVariant *param,
         {
             return;
         }
-        ghb_file_open_containing_folder(path);
+        g_autoptr(GFile) file = g_file_new_for_path(path);
+        ghb_file_open_containing_folder(file);
     }
 }
+
 G_MODULE_EXPORT void
 queue_play_file_action_cb (GSimpleAction *action, GVariant *param,
                            signal_user_data_t *ud)
@@ -2328,9 +2264,7 @@ queue_play_file_action_cb (GSimpleAction *action, GVariant *param,
     GtkListBoxRow * row;
     gint            index;
     GhbValue      * queueDict, * uiDict;
-    GString       * str;
     const char    * path;
-    char          * uri;
 
     lb  = GTK_LIST_BOX(ghb_builder_widget("queue_list"));
     row = gtk_list_box_get_selected_row(lb);
@@ -2344,11 +2278,8 @@ queue_play_file_action_cb (GSimpleAction *action, GVariant *param,
         queueDict = ghb_array_get(ud->queue, index);
         uiDict    = ghb_dict_get(queueDict, "uiSettings");
         path      = ghb_dict_get_string(uiDict, "destination");
-        str       = g_string_new(NULL);
-        g_string_printf(str, "file://%s", path);
-        uri       = g_string_free(str, FALSE);
-        ghb_browse_uri(uri);
-        g_free(uri);
+        g_autoptr(GFile) file = g_file_new_for_path(path);
+        ghb_file_open(file);
     }
 }
 

@@ -9,23 +9,21 @@
 
 namespace HandBrakeWPF.ViewModels
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.Linq;
-
     using HandBrake.Interop.Interop;
     using HandBrake.Interop.Interop.Interfaces.Model;
     using HandBrake.Interop.Interop.Interfaces.Model.Encoders;
-
     using HandBrakeWPF.Commands;
     using HandBrakeWPF.EventArgs;
     using HandBrakeWPF.Model.Audio;
+    using HandBrakeWPF.Services.Encode.Model.Models.Filters;
     using HandBrakeWPF.Services.Interfaces;
     using HandBrakeWPF.Services.Presets.Model;
     using HandBrakeWPF.Services.Scan.Model;
     using HandBrakeWPF.ViewModels.Interfaces;
-
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Linq;
     using AudioTrack = Services.Encode.Model.Models.AudioTrack;
     using EncodeTask = Services.Encode.Model.EncodeTask;
     using OutputFormat = Services.Encode.Model.Models.OutputFormat;
@@ -35,6 +33,8 @@ namespace HandBrakeWPF.ViewModels
     /// </summary>
     public class AudioViewModel : ViewModelBase, IAudioViewModel
     {
+        private readonly IAudioAdvancedViewModel audioAdvancedViewModel;
+
         private IEnumerable<Audio> sourceTracks;
 
         #region Constructors and Destructors
@@ -48,10 +48,11 @@ namespace HandBrakeWPF.ViewModels
         /// <param name="userSettingService">
         /// The user Setting Service.
         /// </param>
-        public AudioViewModel(IWindowManager windowManager, IUserSettingService userSettingService)
+        public AudioViewModel(IWindowManager windowManager, IUserSettingService userSettingService, IAudioAdvancedViewModel audioAdvancedViewModel)
         {
+            this.audioAdvancedViewModel = audioAdvancedViewModel;
             this.Task = new EncodeTask();
-            this.AudioDefaultsViewModel = new AudioDefaultsViewModel(windowManager);
+            this.AudioDefaultsViewModel = new AudioDefaultsViewModel(windowManager, audioAdvancedViewModel);
 
             this.SampleRates = new ObservableCollection<string> { "Auto" };
             foreach (var item in HandBrakeEncoderHelpers.AudioSampleRates)
@@ -62,9 +63,12 @@ namespace HandBrakeWPF.ViewModels
             this.AudioEncoders = HandBrakeEncoderHelpers.AudioEncoders.ToList();
             this.SourceTracks = new List<Audio>();
             this.RemoveCommand = new SimpleRelayCommand<AudioTrack>(this.Remove);
+            this.ShowAudioAdvancedSettingsCommand = new SimpleRelayCommand<AudioTrack>(this.ShowAudioAdvancedSettings);
         }
 
         public SimpleRelayCommand<AudioTrack> RemoveCommand { get; set; }
+
+        public SimpleRelayCommand<AudioTrack> ShowAudioAdvancedSettingsCommand { get; set; }
 
         #endregion
 
@@ -179,6 +183,17 @@ namespace HandBrakeWPF.ViewModels
                 }
             }
 
+            if (format == OutputFormat.Mov)
+            {
+                foreach (AudioTrack track in this.Task.AudioTracks)
+                {
+                    if (!track.Encoder.SupportsMOV)
+                    {
+                        track.Encoder = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.AvAac);
+                    }
+                }
+            }
+
             if (format == OutputFormat.WebM)
             {
                 foreach (AudioTrack track in this.Task.AudioTracks)
@@ -212,20 +227,10 @@ namespace HandBrakeWPF.ViewModels
             }
         }
 
-        public void ExpandAllTracks()
+        public void ShowAudioAdvancedSettings(AudioTrack track)
         {
-            foreach (var track in this.Task.AudioTracks)
-            {
-                track.IsExpandedTrackView = true;
-            }
-        }
-
-        public void CollapseAllTracks()
-        {
-            foreach (var track in this.Task.AudioTracks)
-            {
-                track.IsExpandedTrackView = false;
-            }
+            this.audioAdvancedViewModel.UpdateTask(track);
+            this.audioAdvancedViewModel.ShowDialog();
         }
 
         #endregion
@@ -403,7 +408,12 @@ namespace HandBrakeWPF.ViewModels
                 {
                     if (!useBehaviourTemplateMode)
                     {
-                        this.Task.AudioTracks.Add(new AudioTrack { ScannedTrack = track });
+                        this.Task.AudioTracks.Add(new AudioTrack
+                        {
+                            PassthruTracks = this.CheckPassthruTrack,
+                            TrackNamingBehaviour = this.CheckNamingBehaviour,
+                            ScannedTrack = track
+                        });
                         return;
                     }
 
@@ -413,7 +423,12 @@ namespace HandBrakeWPF.ViewModels
                             AudioBehaviourTrack template = this.AudioBehaviours.BehaviourTracks.FirstOrDefault();
                             if (this.CanAddTrack(template, track, this.AudioBehaviours.AudioFallbackEncoder))
                             {
-                                this.Task.AudioTracks.Add( template != null ? new AudioTrack(template, track, this.AudioBehaviours.AllowedPassthruOptions, this.AudioBehaviours.AudioFallbackEncoder, this.Task.OutputFormat) : new AudioTrack { ScannedTrack = track });
+                                this.Task.AudioTracks.Add(template != null ? new AudioTrack(template, track, this.AudioBehaviours.AllowedPassthruOptions, this.AudioBehaviours.AudioFallbackEncoder, this.Task.OutputFormat, this.CheckPassthruTrack, this.CheckNamingBehaviour) : new AudioTrack
+                                {
+                                    PassthruTracks = this.CheckPassthruTrack,
+                                    TrackNamingBehaviour = this.CheckNamingBehaviour,
+                                    ScannedTrack = track
+                                });
                             }
                             break;
                         case AudioTrackDefaultsMode.AllTracks:
@@ -421,7 +436,12 @@ namespace HandBrakeWPF.ViewModels
                             {
                                 if (this.CanAddTrack(tmpl, track, this.AudioBehaviours.AudioFallbackEncoder))
                                 {
-                                    this.Task.AudioTracks.Add(tmpl != null ? new AudioTrack(tmpl, track, this.AudioBehaviours.AllowedPassthruOptions, this.AudioBehaviours.AudioFallbackEncoder, this.Task.OutputFormat) : new AudioTrack { ScannedTrack = track });
+                                    this.Task.AudioTracks.Add(tmpl != null ? new AudioTrack(tmpl, track, this.AudioBehaviours.AllowedPassthruOptions, this.AudioBehaviours.AudioFallbackEncoder, this.Task.OutputFormat, this.CheckPassthruTrack, this.CheckNamingBehaviour) : new AudioTrack
+                                    {
+                                        PassthruTracks = this.CheckPassthruTrack,
+                                        TrackNamingBehaviour = this.CheckNamingBehaviour,
+                                        ScannedTrack = track
+                                    });
                                 }
                             }
 
@@ -472,10 +492,10 @@ namespace HandBrakeWPF.ViewModels
                 Audio sourceTrack = this.GetPreferredAudioTrack();
                 if (this.CanAddTrack(track, sourceTrack, this.AudioBehaviours.AudioFallbackEncoder))
                 {
-                    this.Task.AudioTracks.Add(new AudioTrack(track, sourceTrack, this.AudioBehaviours.AllowedPassthruOptions, this.AudioBehaviours.AudioFallbackEncoder, this.Task.OutputFormat));
+                    this.Task.AudioTracks.Add(new AudioTrack(track, sourceTrack, this.AudioBehaviours.AllowedPassthruOptions, this.AudioBehaviours.AudioFallbackEncoder, this.Task.OutputFormat, this.CheckPassthruTrack, this.CheckNamingBehaviour));
                 }
             }
-           
+
             // Step 4, Handle the default selection behaviour.
             switch (this.AudioBehaviours.SelectedBehaviour)
             {
@@ -488,6 +508,12 @@ namespace HandBrakeWPF.ViewModels
                 case AudioBehaviourModes.AllMatching: // Add Languages tracks for the additional languages selected, in-order.
                     this.AddAllRemainingForSelectedLanguages();
                     break;
+            }
+
+            foreach (AudioTrack track in this.Task.AudioTracks)
+            {
+                track.PassthruTrackName();
+                track.AutoNameTrack();
             }
         }
 
@@ -619,6 +645,26 @@ namespace HandBrakeWPF.ViewModels
             }
 
             return orderedTracks;
+        }
+
+        private AudioTrackNamingBehaviour CheckNamingBehaviour()
+        {
+            if (this.AudioBehaviours != null)
+            {
+                return this.AudioBehaviours.AudioAutomaticNamingBehavior;
+            }
+
+            return AudioTrackNamingBehaviour.None;
+        }
+
+        private bool CheckPassthruTrack()
+        {
+            if (this.AudioBehaviours != null)
+            {
+                return this.AudioBehaviours.AudioTrackNamePassthru;
+            }
+
+            return false;
         }
 
         #endregion

@@ -1,6 +1,6 @@
 /* rendersub.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -122,6 +122,7 @@ hb_filter_object_t hb_filter_render_sub =
     .id            = HB_FILTER_RENDER_SUB,
     .enforce_order = 1,
     .name          = "Subtitle renderer",
+    .short_name    = "rendersub",
     .settings      = NULL,
     .init          = hb_rendersub_init,
     .post_init     = hb_rendersub_post_init,
@@ -836,7 +837,7 @@ static void ssa_work_init(hb_filter_private_t *pv, const hb_data_t *sub_data)
         break;
     //use video csp
     case YCBCR_UNKNOWN://cannot parse
-    case YCBCR_NONE:   //explicitely requested no override
+    case YCBCR_NONE:   //explicitly requested no override
     default:
         pv->rgb2yuv_fn = hb_get_rgb2yuv_function(pv->input.color_matrix);
         break;

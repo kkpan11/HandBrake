@@ -1,6 +1,6 @@
 /* lapsharp_vt.m
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -121,6 +121,7 @@ hb_filter_object_t hb_filter_lapsharp_vt =
     .id                = HB_FILTER_LAPSHARP_VT,
     .enforce_order     = 1,
     .name              = "Lapsharp (VideoToolbox)",
+    .short_name        = "lapsharp_vt",
     .settings          = NULL,
     .init              = lapsharp_vt_init,
     .work              = lapsharp_vt_work,

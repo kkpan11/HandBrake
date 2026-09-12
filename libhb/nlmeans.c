@@ -1,7 +1,7 @@
 /* nlmeans.c
 
    Copyright (c) 2013 Dirk Farin
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -204,6 +204,7 @@ hb_filter_object_t hb_filter_nlmeans =
     .id                = HB_FILTER_NLMEANS,
     .enforce_order     = 1,
     .name              = "Denoise (nlmeans)",
+    .short_name        = "nlmeans",
     .settings          = NULL,
     .init              = nlmeans_init,
     .work              = nlmeans_work,

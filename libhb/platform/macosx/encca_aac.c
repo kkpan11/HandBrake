@@ -1,6 +1,6 @@
 /* encca_aac.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -44,7 +44,6 @@ hb_work_object_t hb_encca_haac =
 struct hb_work_private_s
 {
     uint8_t *buf;
-    hb_job_t *job;
     hb_list_t *list;
 
     AudioConverterRef converter;
@@ -123,6 +122,42 @@ static long ReadESDSDescExt(void* descExt, UInt8 **buffer, UInt32 *size, int ver
     return noErr;
 }
 
+// based off get_aac_tag from audiotoolboxenc.c in ffmpeg's libavcodec
+static const struct
+{
+    AVChannelLayout chl;
+    AudioChannelLayoutTag tag;
+}
+aac_channel_layout_map[] =
+{
+    { AV_CHANNEL_LAYOUT_MONO,              kAudioChannelLayoutTag_Mono },
+    { AV_CHANNEL_LAYOUT_STEREO,            kAudioChannelLayoutTag_Stereo },
+    { AV_CHANNEL_LAYOUT_2_2,               kAudioChannelLayoutTag_AAC_Quadraphonic },
+    { AV_CHANNEL_LAYOUT_OCTAGONAL,         kAudioChannelLayoutTag_AAC_Octagonal },
+    { AV_CHANNEL_LAYOUT_SURROUND,          kAudioChannelLayoutTag_AAC_3_0 },
+    { AV_CHANNEL_LAYOUT_4POINT0,           kAudioChannelLayoutTag_AAC_4_0 },
+    { AV_CHANNEL_LAYOUT_5POINT0,           kAudioChannelLayoutTag_AAC_5_0 },
+    { AV_CHANNEL_LAYOUT_5POINT1,           kAudioChannelLayoutTag_AAC_5_1 },
+    { AV_CHANNEL_LAYOUT_6POINT0,           kAudioChannelLayoutTag_AAC_6_0 },
+    { AV_CHANNEL_LAYOUT_6POINT1,           kAudioChannelLayoutTag_AAC_6_1 },
+    { AV_CHANNEL_LAYOUT_7POINT0,           kAudioChannelLayoutTag_AAC_7_0 },
+    { AV_CHANNEL_LAYOUT_7POINT1_WIDE,      kAudioChannelLayoutTag_AAC_7_1 },
+    { AV_CHANNEL_LAYOUT_7POINT1,           kAudioChannelLayoutTag_AAC_7_1_B },
+};
+static int aac_channel_layout_map_count = sizeof(aac_channel_layout_map) / sizeof(aac_channel_layout_map[0]);
+
+static AudioChannelLayoutTag get_aac_tag(const AVChannelLayout *in_layout)
+{
+    for (int i = 0; i <= aac_channel_layout_map_count; i++)
+    {
+        if (!av_channel_layout_compare(in_layout, &aac_channel_layout_map[i].chl))
+        {
+            return aac_channel_layout_map[i].tag;
+        }
+    }
+    return 0;
+}
+
 /***********************************************************************
  * hb_work_encCoreAudio_init switches
  ***********************************************************************
@@ -152,12 +187,10 @@ int encCoreAudioInit(hb_work_object_t *w, hb_job_t *job, enum AAC_MODE mode)
     OSStatus err;
 
     w->private_data = pv;
-    pv->job = job;
     pv->first_pts = AV_NOPTS_VALUE;
 
     // pass the number of channels used into the private work data
-    pv->nchannels =
-        hb_mixdown_get_discrete_channel_count(audio->config.out.mixdown);
+    pv->nchannels = audio->config.out.ch_layout->nb_channels;
 
     bzero(&input, sizeof(AudioStreamBasicDescription));
     input.mSampleRate = (Float64)audio->config.out.samplerate;
@@ -298,14 +331,36 @@ int encCoreAudioInit(hb_work_object_t *w, hb_job_t *job, enum AAC_MODE mode)
     audio->config.out.samples_per_frame = pv->isamples;
 
     // channel remapping
-    pv->remap = hb_audio_remap_init(AV_SAMPLE_FMT_FLT, &hb_aac_chan_map,
-                                    audio->config.in.channel_map);
+    AVChannelLayout out_layout = {0};
+    hb_audio_remap_map_channel_layout(&hb_aac_chan_map, &out_layout, audio->config.out.ch_layout);
+
+    pv->remap = hb_audio_remap_init(AV_SAMPLE_FMT_FLT,
+                                    &out_layout,
+                                    audio->config.out.ch_layout);
+
+    AudioChannelLayout channel_layout;
+    bzero(&channel_layout, sizeof(channel_layout));
+
+    channel_layout.mChannelLayoutTag = get_aac_tag(audio->config.out.ch_layout);
+
+    if (channel_layout.mChannelLayoutTag != 0)
+    {
+        AudioConverterSetProperty(pv->converter, kAudioConverterInputChannelLayout,
+                                  sizeof(channel_layout), &channel_layout);
+        AudioConverterSetProperty(pv->converter, kAudioConverterOutputChannelLayout,
+                                  sizeof(channel_layout), &channel_layout);
+    }
+    else
+    {
+        hb_log("encCoreAudioInit: get_aac_tag() failed");
+    }
+
+    av_channel_layout_uninit(&out_layout);
+
     if (pv->remap == NULL)
     {
         hb_error("encCoreAudioInit: hb_audio_remap_init() failed");
     }
-    uint64_t layout = hb_ff_mixdown_xlat(audio->config.out.mixdown, NULL);
-    hb_audio_remap_set_channel_layout(pv->remap, layout);
 
     // get maximum output size
     AudioConverterGetProperty(pv->converter,

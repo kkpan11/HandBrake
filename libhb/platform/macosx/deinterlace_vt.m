@@ -1,6 +1,6 @@
 /* deinterlace_vt.m
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -82,6 +82,7 @@ hb_filter_object_t hb_filter_yadif_vt =
     .id                = HB_FILTER_YADIF_VT,
     .enforce_order     = 1,
     .name              = "Yadif (VideoToolbox)",
+    .short_name        = "yadif_vt",
     .settings          = NULL,
     .init              = yadif_vt_init,
     .work              = deinterlace_vt_work,
@@ -94,6 +95,7 @@ hb_filter_object_t hb_filter_bwdif_vt =
     .id                = HB_FILTER_BWDIF_VT,
     .enforce_order     = 1,
     .name              = "Bwdif (VideoToolbox)",
+    .short_name        = "bwdif_vt",
     .settings          = NULL,
     .init              = bwdif_vt_init,
     .work              = deinterlace_vt_work,

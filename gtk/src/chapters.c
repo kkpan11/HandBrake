@@ -1,6 +1,6 @@
 /* chapters.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -48,7 +48,7 @@ create_chapter_row (int index, gint64 start, gint64 duration,
     gtk_widget_add_controller(row, econ);
     g_signal_connect(econ, "key-pressed", G_CALLBACK(chapter_keypress_cb), ud);
 
-    gtk_widget_show(row);
+    gtk_widget_set_visible(row, TRUE);
     return row;
 }
 

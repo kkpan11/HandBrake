@@ -49,7 +49,7 @@ ifeq (1,$(FEATURE.x265))
 endif
 
 MODULES += contrib/libdav1d
-MODULES += contrib/cpuinfo
+MODULES += contrib/libudfread
 MODULES += contrib/svt-av1
 MODULES += contrib/zimg
 MODULES += contrib/ffmpeg
@@ -78,10 +78,6 @@ endif
 ifneq (,$(filter $(HOST.system),darwin))
     MODULES += contrib/xz
     MODULES += contrib/bin2c
-endif
-
-ifneq (,$(filter $(HOST.machine),arm64 aarch64))
-    MODULES += contrib/sse2neon
 endif
 
 ifneq (,$(filter $(HOST.system),cygwin mingw))

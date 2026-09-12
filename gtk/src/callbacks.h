@@ -1,6 +1,6 @@
 /* callbacks.h
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -82,11 +82,14 @@ void ghb_scale_configure(signal_user_data_t *ud, const char *name, double val,
 void ghb_update_summary_info(signal_user_data_t *ud);
 void ghb_set_title_settings(signal_user_data_t *ud, GhbValue *settings);
 void ghb_browse_uri(const gchar *uri);
+void ghb_file_open(GFile *file);
+void ghb_file_open_containing_folder(GFile *file);
 void ghb_set_destination(signal_user_data_t *ud);
 void ghb_break_pts_duration(gint64 ptsDuration,
                             gint *hh, gint *mm, gdouble *ss);
 void ghb_break_duration(gint64 duration, gint *hh, gint *mm, gint *ss);
 GtkFileFilter *ghb_add_file_filter(GtkFileChooser *chooser,
                                    const char *name, const char *id);
+void ghb_check_send_to_available (void);
 
 G_END_DECLS

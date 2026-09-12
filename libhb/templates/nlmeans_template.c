@@ -1,6 +1,6 @@
 /* common.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -50,7 +50,7 @@ static void FUNC(nlmeans_deborder)(const BorderedPlane *src,
 {
     pixel *dst = in_dst;
     const int bw = src->w + 2 * src->border;
-    pixel *image = src->mem + src->border + bw * src->border;
+    pixel *image = ((pixel *)src->mem) + src->border + bw * src->border;
 
     int width = w;
     if (src->w < width)

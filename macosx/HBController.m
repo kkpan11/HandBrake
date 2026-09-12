@@ -543,8 +543,12 @@ static void *HBControllerLogLevelContext = &HBControllerLogLevelContext;
 {
     SEL action = menuItem.action;
 
-    if (action == @selector(addToQueue:) || action == @selector(addAllTitlesToQueue:) ||
-        action == @selector(addTitlesToQueue:) || action == @selector(showAddPresetPanel:))
+    if (action == @selector(addToQueue:) ||
+        action == @selector(addAllTitlesToQueue:) ||
+        action == @selector(addTitlesToQueue:) ||
+        action == @selector(showAddPresetPanel:) ||
+        action == @selector(revealDestinationItemsInFinder:) ||
+        action == @selector(revealSourceItemsInFinder:))
     {
         return self.job && self.window.attachedSheet == nil;
     }
@@ -778,8 +782,9 @@ static void *HBControllerLogLevelContext = &HBControllerLogLevelContext;
 
         if (isDirectory.boolValue == YES)
         {
-            [self.job setDestinationFolderURL:self.destinationFolderURL sameAsSource:YES];
+            self.destinationFolderURL = sourceURL;
             self.destinationFolderToken = [HBSecurityAccessToken tokenWithObject:sourceURL];
+            [self.job setDestinationFolderURL:sourceURL sameAsSource:YES];
             return;
         }
     }
@@ -1264,6 +1269,22 @@ static void *HBControllerLogLevelContext = &HBControllerLogLevelContext;
                 self.job = job;
             }
         }
+    }
+}
+
+- (IBAction)revealDestinationItemsInFinder:(id)sender
+{
+    if (self.job.destinationURL)
+    {
+        [NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[self.job.destinationFolderURL]];
+    }
+}
+
+- (IBAction)revealSourceItemsInFinder:(id)sender
+{
+    if (self.job.fileURL)
+    {
+        [NSWorkspace.sharedWorkspace activateFileViewerSelectingURLs:@[self.job.fileURL]];
     }
 }
 

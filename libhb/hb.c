@@ -1,6 +1,6 @@
 /* hb.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -11,6 +11,7 @@
 #include "handbrake/hbffmpeg.h"
 #include "handbrake/hbavfilter.h"
 #include "handbrake/encx264.h"
+#include "handbrake/vaapi_common.h"
 #include "libavfilter/avfilter.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -84,8 +85,13 @@ int hb_avcodec_open(AVCodecContext *avctx, const AVCodec *codec,
     if ((thread_count == HB_FFMPEG_THREADS_AUTO || thread_count > 0) &&
         (codec->type == AVMEDIA_TYPE_VIDEO))
     {
+#if defined (__aarch64__) && defined(_WIN32)
+        avctx->thread_count = (thread_count == HB_FFMPEG_THREADS_AUTO) ?
+                               hb_get_cpu_count() + 1 : thread_count;
+#else
         avctx->thread_count = (thread_count == HB_FFMPEG_THREADS_AUTO) ?
                                hb_get_cpu_count() / 2 + 1 : thread_count;
+#endif
         avctx->thread_type = FF_THREAD_FRAME|FF_THREAD_SLICE;
     }
     else
@@ -382,7 +388,7 @@ void hb_scan( hb_handle_t * h, hb_list_t * paths, int title_index,
     {
         single_path = hb_list_item(paths, 0);
     }
-    
+
     // Check if scanning is necessary. Only works on Single Path.
     if (single_path != NULL && h->title_set.path != NULL && !strcmp(h->title_set.path, single_path))
     {
@@ -430,6 +436,15 @@ void hb_scan( hb_handle_t * h, hb_list_t * paths, int title_index,
     free((char*)h->title_set.path);
     h->title_set.path = NULL;
 
+    /* Print operating system info here so that it's in all scan and encode logs */
+    const char *os_name    = hb_get_system_name();
+    const char *os_version = hb_get_system_version();
+    const char *os_build   = hb_get_system_build();
+    if (os_name != NULL && os_version != NULL && os_build != NULL)
+    {
+        hb_log("OS: %s %s (%s)", os_name, os_version, os_build);
+    }
+
     /* Print CPU info here so that it's in all scan and encode logs */
     const char *cpu_name = hb_get_cpu_name();
     const char *cpu_type = hb_get_cpu_platform_name();
@@ -441,7 +456,7 @@ void hb_scan( hb_handle_t * h, hb_list_t * paths, int title_index,
     hb_log(" - logical processor count: %d", hb_get_cpu_count());
 
 #if HB_PROJECT_FEATURE_QSV
-    if (!is_hardware_disabled())
+    if (!hb_is_hardware_disabled())
     {
         /* Print QSV info here so that it's in all scan and encode logs */
         hb_qsv_info_print();
@@ -486,32 +501,33 @@ hb_title_set_t * hb_get_title_set( hb_handle_t * h )
 hb_list_t * hb_get_title_coverarts( hb_handle_t * h, int title )
 {
     hb_title_t * sourceTitle = hb_list_item(h->title_set.list_title, title);
-    if (sourceTitle) 
+    if (sourceTitle)
     {
         hb_list_t * coverart = sourceTitle->metadata->list_coverart;
         return coverart;
     }
-    
+
     hb_list_t * emptyList = hb_list_init();
     return emptyList;
 }
+
+#define HB_PLANES_MAX   3
+#define HB_FORMAT_CHARS 4
 
 int hb_save_preview( hb_handle_t * h, int title, int preview, hb_buffer_t *buf, int format )
 {
     FILE    * file;
     char    * filename;
     char      reason[80];
-    const int planes_max   = 3;
-    const int format_chars = 4;
-    char      format_string[format_chars];
+    char      format_string[HB_FORMAT_CHARS];
 
     switch (format)
     {
         case HB_PREVIEW_FORMAT_YUV:
-            strncpy(format_string, "yuv", format_chars);
+            strncpy(format_string, "yuv", HB_FORMAT_CHARS);
             break;
         case HB_PREVIEW_FORMAT_JPG:
-            strncpy(format_string, "jpg", format_chars);
+            strncpy(format_string, "jpg", HB_FORMAT_CHARS);
             break;
         default:
             hb_error("hb_save_preview: Unsupported preview format %d", format);
@@ -537,7 +553,7 @@ int hb_save_preview( hb_handle_t * h, int title, int preview, hb_buffer_t *buf, 
     if (format == HB_PREVIEW_FORMAT_YUV)
     {
         int pp, hh;
-        for(pp = 0; pp < planes_max; pp++)
+        for(pp = 0; pp < HB_PLANES_MAX; pp++)
         {
             const uint8_t * data = buf->plane[pp].data;
             const int     stride = buf->plane[pp].stride;
@@ -570,10 +586,10 @@ int hb_save_preview( hb_handle_t * h, int title, int preview, hb_buffer_t *buf, 
         const int       jpeg_quality = 90;
         unsigned long   jpeg_size    = 0;
         unsigned char * jpeg_data    = NULL;
-        int             planes_stride[planes_max];
-        uint8_t       * planes_data[planes_max];
+        int             planes_stride[HB_PLANES_MAX];
+        uint8_t       * planes_data[HB_PLANES_MAX];
         int             pp, compressor_result;
-        for (pp = 0; pp < planes_max; pp++)
+        for (pp = 0; pp < HB_PLANES_MAX; pp++)
         {
             planes_stride[pp] = buf->plane[pp].stride;
             planes_data[pp]   = buf->plane[pp].data;
@@ -624,9 +640,7 @@ hb_buffer_t * hb_read_preview(hb_handle_t * h, hb_title_t *title, int preview, i
     FILE    * file = NULL;
     char    * filename = NULL;
     char      reason[80];
-    const int planes_max   = 3;
-    const int format_chars = 4;
-    char      format_string[format_chars];
+    char      format_string[HB_FORMAT_CHARS];
 
     hb_buffer_t * buf;
     buf = hb_frame_buffer_init(AV_PIX_FMT_YUV420P,
@@ -646,10 +660,10 @@ hb_buffer_t * hb_read_preview(hb_handle_t * h, hb_title_t *title, int preview, i
     switch (format)
     {
         case HB_PREVIEW_FORMAT_YUV:
-            strncpy(format_string, "yuv", format_chars);
+            strncpy(format_string, "yuv", HB_FORMAT_CHARS);
             break;
         case HB_PREVIEW_FORMAT_JPG:
-            strncpy(format_string, "jpg", format_chars);
+            strncpy(format_string, "jpg", HB_FORMAT_CHARS);
             break;
         default:
             hb_error("hb_read_preview: Unsupported preview format %d", format);
@@ -675,7 +689,7 @@ hb_buffer_t * hb_read_preview(hb_handle_t * h, hb_title_t *title, int preview, i
     if (format == HB_PREVIEW_FORMAT_YUV)
     {
         int pp, hh;
-        for (pp = 0; pp < planes_max; pp++)
+        for (pp = 0; pp < HB_PLANES_MAX; pp++)
         {
             uint8_t       * data = buf->plane[pp].data;
             const int     stride = buf->plane[pp].stride;
@@ -726,10 +740,10 @@ hb_buffer_t * hb_read_preview(hb_handle_t * h, hb_title_t *title, int preview, i
         }
 
         tjhandle   jpeg_decompressor = tjInitDecompress();
-        int        planes_stride[planes_max];
-        uint8_t  * planes_data[planes_max];
+        int        planes_stride[HB_PLANES_MAX];
+        uint8_t  * planes_data[HB_PLANES_MAX];
         int        pp, decompressor_result;
-        for (pp = 0; pp < planes_max; pp++)
+        for (pp = 0; pp < HB_PLANES_MAX; pp++)
         {
             planes_stride[pp] = buf->plane[pp].stride;
             planes_data[pp]   = buf->plane[pp].data;
@@ -1655,12 +1669,12 @@ void hb_add_filter2( hb_value_array_t * list, hb_dict_t * filter_dict )
 }
 
 /**
- * Add a filter to a jobs filter list
+ * Add a filter to a  filter list
  *
- * @param job Handle to hb_job_t
+ * @param list Handle to a filter hb_list_t
  * @param settings to give the filter
  */
-void hb_add_filter_dict( hb_job_t * job, hb_filter_object_t * filter,
+void hb_add_filter_dict( hb_list_t * list_filter, hb_filter_object_t * filter,
                          const hb_dict_t * settings_in )
 {
     if (filter == NULL)
@@ -1688,12 +1702,12 @@ void hb_add_filter_dict( hb_job_t * job, hb_filter_object_t * filter,
     {
         // Find the position in the filter chain this filter belongs in
         int i;
-        for( i = 0; i < hb_list_count( job->list_filter ); i++ )
+        for( i = 0; i < hb_list_count( list_filter ); i++ )
         {
-            hb_filter_object_t * f = hb_list_item( job->list_filter, i );
+            hb_filter_object_t * f = hb_list_item( list_filter, i );
             if( f->id > filter->id )
             {
-                hb_list_insert( job->list_filter, i, filter );
+                hb_list_insert( list_filter, i, filter );
                 return;
             }
             else if( f->id == filter->id )
@@ -1705,16 +1719,16 @@ void hb_add_filter_dict( hb_job_t * job, hb_filter_object_t * filter,
         }
     }
     // No position found or order not enforced for this filter
-    hb_list_add( job->list_filter, filter );
+    hb_list_add( list_filter, filter );
 }
 
 /**
- * Add a filter to a jobs filter list
+ * Add a filter to a  filter list
  *
- * @param job Handle to hb_job_t
+ * @param list Handle to a filter hb_list_t
  * @param settings to give the filter
  */
-void hb_add_filter( hb_job_t * job, hb_filter_object_t * filter,
+void hb_add_filter( hb_list_t * list, hb_filter_object_t * filter,
                     const char * settings_in )
 {
     if (filter == NULL)
@@ -1728,7 +1742,7 @@ void hb_add_filter( hb_job_t * job, hb_filter_object_t * filter,
         hb_log("hb_add_filter: failed to parse filter settings!");
         return;
     }
-    hb_add_filter_dict(job, filter, settings);
+    hb_add_filter_dict(list, filter, settings);
     hb_value_free(&settings);
 }
 
@@ -1787,6 +1801,10 @@ static void hb_add_internal( hb_handle_t * h, hb_job_t * job, hb_list_t *list_pa
     job_copy->list_filter     = NULL;
     job_copy->list_attachment = NULL;
     job_copy->metadata        = NULL;
+
+#if HB_PROJECT_FEATURE_QSV
+    job_copy->qsv_ctx = hb_qsv_context_dup(job->qsv_ctx);
+#endif
 
     /* If we're doing Foreign Audio Search, copy all subtitles matching the
      * first audio track language we find in the audio list.
@@ -2222,6 +2240,8 @@ void hb_global_close()
         closedir( dir );
         rmdir( dirname );
     }
+
+    hb_common_global_close(disable_hardware);
 }
 
 /**
@@ -2328,12 +2348,16 @@ static void redirect_thread_func(void * _data)
 #endif
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    FILE * log_f = fdopen(pfd[0], "rb");
+    FILE *log_f = fdopen(pfd[0], "rb");
 
-    char line_buffer[500];
-    while(fgets(line_buffer, 500, log_f) != NULL)
+    if (log_f != NULL)
     {
-        hb_log_callback(line_buffer);
+        char line_buffer[500];
+        while(fgets(line_buffer, 500, log_f) != NULL)
+        {
+            hb_log_callback(line_buffer);
+        }
+        fclose(log_f);
     }
 }
 
@@ -2398,7 +2422,7 @@ hb_interjob_t * hb_interjob_get( hb_handle_t * h )
     return h->interjob;
 }
 
-int is_hardware_disabled(void)
+int hb_is_hardware_disabled(void)
 {
     return disable_hardware;
 }

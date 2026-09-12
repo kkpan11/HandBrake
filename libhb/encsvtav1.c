@@ -1,6 +1,6 @@
 /* encsvtav1.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    partially based on FFmpeg libsvtav1.c
    Homepage: <http://handbrake.fr/>.
@@ -26,6 +26,8 @@ void encsvtClose(hb_work_object_t *);
 
 #define FRAME_INFO_SIZE 2048
 #define FRAME_INFO_MASK (FRAME_INFO_SIZE - 1)
+
+#define MAX_QP_VALUE 63
 
 hb_work_object_t hb_encsvtav1 =
 {
@@ -124,7 +126,8 @@ int encsvtInit(hb_work_object_t *w, hb_job_t *job)
     }
     else
     {
-        param->qp                = job->vquality;
+        param->qp                         = fmin(job->vquality, MAX_QP_VALUE); // truncated 
+        param->extended_crf_qindex_offset = (job->vquality - param->qp) * 4;
         param->rate_control_mode = SVT_AV1_RC_MODE_CQP_OR_CRF;
         param->force_key_frames = 1;
     }
@@ -184,11 +187,23 @@ int encsvtInit(hb_work_object_t *w, hb_job_t *job)
         }
     }
 
-    if (job->encoder_tune != NULL && strstr("ssim", job->encoder_tune) != NULL)
+    if (job->encoder_tune != NULL && strstr(job->encoder_tune, "vmaf") != NULL)
+    {
+        param->tune = 5;
+    }
+    else if (job->encoder_tune != NULL && strstr(job->encoder_tune, "ms-ssim") != NULL)
+    {
+        param->tune = 4;
+    }
+    else if (job->encoder_tune != NULL && strstr(job->encoder_tune, "iq") != NULL)
+    {
+        param->tune = 3;
+    }
+    else if (job->encoder_tune != NULL && strstr(job->encoder_tune, "ssim") != NULL)
     {
         param->tune = 2;
     }
-    else if (job->encoder_tune != NULL && strstr("psnr", job->encoder_tune) != NULL)
+    else if (job->encoder_tune != NULL && strstr(job->encoder_tune, "psnr") != NULL)
     {
         param->tune = 1;
     }
@@ -197,7 +212,7 @@ int encsvtInit(hb_work_object_t *w, hb_job_t *job)
         param->tune = 0;
     }
 
-    if (job->encoder_tune != NULL && strstr("fastdecode", job->encoder_tune) != NULL)
+    if (job->encoder_tune != NULL && strstr(job->encoder_tune, "fastdecode") != NULL)
     {
         param->fast_decode = 1;
     }
@@ -206,7 +221,6 @@ int encsvtInit(hb_work_object_t *w, hb_job_t *job)
         param->fast_decode = 0;
     }
 
-    param->intra_period_length = ((double)job->orig_vrate.num / job->orig_vrate.den + 0.5) * 10;
     // VFR isn't supported, the rate control will ignore
     // the frames timestamps and use the values below
     param->frame_rate_numerator = job->orig_vrate.num;
@@ -583,10 +597,7 @@ static int receive(hb_work_object_t *w, hb_buffer_t **out, int done)
             break;
     }
 
-    if (headerPtr->pic_type != EB_AV1_NON_REF_PICTURE)
-    {
-        buf->s.flags |= HB_FLAG_FRAMETYPE_REF;
-    }
+    buf->s.flags |= HB_FLAG_FRAMETYPE_REF;
 
     svt_av1_enc_release_out_buffer(&headerPtr);
 

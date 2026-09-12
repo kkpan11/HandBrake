@@ -5,12 +5,264 @@
 
 Before updating HandBrake, please make sure there are no pending encodes in the queue, and be sure to make a backup of any custom presets and app preferences you have, as they may not be compatible with newer versions.
 
-Windows users, please make sure to install [Microsoft .NET Desktop Runtime version 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0/runtime)
+Windows users, please make sure to install [Microsoft .NET Desktop Runtime version 10.0](https://dotnet.microsoft.com/en-us/download/dotnet/10.0/runtime)
 Download available from Microsoft:
-- [For x64 (AMD or Intel CPUs)](https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe)
-- [For Arm64 (Qualcomm or other)](https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-arm64.exe)
+- [For x64 (AMD or Intel CPUs)](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe)
+- [For Arm64 (Qualcomm or other)](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-arm64.exe)
+
+
+## HandBrake 1.12.0
+
+### All platforms
+
+#### Video
+
+- Added video filters:
+    - Deband
+    - BM3D
+- Stereo 3D and spherical video mapping metadata are now preserved
+- Fixed FFV1 SAR in bitstream
+
+#### Audio
+
+- Added audio filters:
+    - Gate
+    - Compressor
+- Added 3.0, 4.0, and quadrophonic mixdowns
+- Renamed "7.1 (5F/2R/LFE)" mixdown to "7.1 (SDDS)" (speaker layout used by Sony Dynamic Digital Sound)
+
+#### Third-party libraries
+
+- Updated libraries
+  - AMF 1.5.2 (AMD VCN video encoding)
+  - FFmpeg 8.1.2 (decoding and filters)
+  - FreeType 2.14.3 (subtitles)
+  - HarfBuzz 14.3.0 (subtitles)
+  - libbluray 1.5.0 (Blu-ray decoding)
+  - libdav1d 1.5.4 (AV1 decoding)
+  - libdvdread 7.1.1 (DVD decoding)
+  - libiconv 1.19 (character encoding support)
+  - libjpeg-turbo 3.2.0 (preview image compression)
+  - nv-codec-headers 13.1.15.0 (Nvidia NVENC encoding)
+  - oneVPL 2.17.0 (Intel QSV video encoding/decoding)
+  - SVT-AV1 4.2.0 (AV1 video encoding)
+  - x265 4.3 (H.265/HEVC video encoding)
+
+
+## HandBrake 1.11.2
+
+### All platforms
+
+#### Video
+
+- Fixed a crash that happened when doing a 2-pass lossless x265 encode
+- Fixed a memory leak that happened when doing a 2-pass MPEG-4/MPEG-2/VP9/FFV1 encode
+
+#### Audio
+
+- Updated the list of supported dithers and encoders combinations
+- Fixed the Core Audio AAC encoder 7.1 channel layout
+
+#### Subtitles
+
+- Fixed the VobSub palette creation in the MP4 container
+
+#### Build system
+
+- Improved build system compatibility with older build tools
+
+#### Third-party libraries
+
+- Updated libraries
+  - FFmpeg 8.0.2 (decoding and filters)
+  - SVT-AV1 4.1.0 (AV1 video encoding)
+
+### Linux
+
+- Added WebM MIME type to the list of the supported formats
+
+### Mac
+
+- Improved handling of unsupported presets
+- Updated Sparkle automatic update library
+
+### Windows
+
+- Improved handling of unsupported presets
+- Improved queue low space pause behaviour
+- Fixed the automatic audio track name generation
+- Fixed the summary description of HDR video
+
+
+## HandBrake 1.11.1
+
+### All platforms
+
+#### Audio
+
+- Fixed a crash that could happen when scanning a PCM track in a DVD-Video or Blu-ray 
+
+#### Third-party libraries
+
+- Updated libraries
+  - Jansson 2.15.0 (JSON architecture)
+  - zlib 1.3.2 (general)
+
+### Windows
+
+- Removed dependency on having Microsoft .NET 8 Desktop Runtime installed
+- Fixed the file type selection in the save panel
+- Fixed a number of issues that impacted screen reader tools ability to read combo box controls
+
+
+## HandBrake 1.11.0
+
+### All platforms
+
+#### General
+
+- Added encoding to MOV container format
+- Added AV1 VCN 2160p 4K preset
+  - For AMD 9000 series GPU hardware and newer
+  - Output dimensions may be incorrect on AMD 7000 series GPU hardware; this is unfixable in software
+- Added Production DNxHR presets
+  - MOV container
+  - Any resolution video using HQX and SQ encoder presets
+  - 2160p, 1080p, and 540p resolution proxy (LB) presets
+  - 24-bit PCM multi-channel audio with pass through support
+- Added Production ProRes presets
+  - MOV container
+  - Any resolution video using standard, HQ, and LT encoder presets
+  - 2160p, 1080p, and 540p resolution proxy presets
+  - 24-bit PCM multi-channel audio with pass through support
+- Added Preservation FFV1 FLAC and PCM presets
+  - Same as Preservation FFV1 with single-codec audio
+- Updated Preservation FFV1 preset to pass through all supported audio codecs
+  - Adds Apple Lossless, PCM, and Vorbis to pass through list
+- Properly handle the case in which the first chapter timestamp is not zero
+
+#### Video
+
+- Added DNxHR encoder
+- Added ProRes encoder
+- Added AMD VCN AV1 10-bit encoder
+- Added MPEG-2 profile and level selection
+- Allowed muxing FFV1 in the MP4 container
+- Improved AV1 in MP4 seeking on Apple software
+- Dolby Vision profile 5 video is now tagged with a proper color tag
+
+#### Audio
+
+- Added PCM encoding and passthru
+- Added support for custom channels order (#7265)
+
+#### Build system
+
+- Updated mingw-w64-build to version 11.0.0.
+- Updated mac-toolchain-build script to version 2.15.0
+
+#### Third-party libraries
+
+- Updated libraries
+  - AMF 1.5.0 (AMD VCN video encoding)
+  - FFmpeg 8.0.1 (decoding and filters)
+  - HarfBuzz 12.2.0 (subtitles)
+  - Jansson 2.14.1 (JSON architecture)
+  - libbluray 1.4.0 (Blu-ray decoding)
+  - libdav1d 1.5.3 (AV1 decoding)
+  - libdvdnav 7.0.0 (DVD decoding)
+  - libdvdread 7.0.1 (DVD decoding)
+  - libjpeg-turbo 3.1.3 (preview image compression)
+  - liblzma (xz) 5.8.2 (LZMA video decoding, e.g. TIFF)
+  - libopus 1.6.1 (Opus audio encoding)
+  - libvpx 1.16.0 (VP8/VP9 video encoding)
+  - oneVPL 2.16.0 (Intel QSV video encoding/decoding)
+  - SVT-AV1 4.0.1 (AV1 video encoding)
+  - x265 r13309 (H.265/HEVC video encoding)
+
+### Linux
+
+- Uses GtkFileLauncher to open files in sandboxed apps
+- Added buttons to cycle through previews on summary page
+- Added an option to change the UI display language
+- Improved display of file sizes
+- Fixed the disk space checks
+- Fixed a crash that could happen when a preset category contains the ' character
+- Updated existing and maintained locales
+
+### Mac
+
+- Notifications sound is now played back when HandBrake is in the foreground
+- File name labels in queue are now truncated in the middle, same behaviour as the Finder
+- Minor miscellaneous fixes
+- Updated existing and maintained locales
+
+### Windows
+
+- The UI now requires Microsoft .NET Desktop Runtime 10.0.x. .NET 8 is no longer required
+- Support for Intel HyperEncode has been removed as the feature is deprecated upstream
+- Minor miscellaneous fixes
+- Updated existing and maintained locales
+
+
+## HandBrake 1.10.2
+
+### All platforms
+
+#### Video
+
+- Fixed a crash that could happen when encoding high depth video
+
+#### Third-party libraries
+
+- Updated libraries
+  - HarfBuzz 11.4.5 (subtitles)
+  - SVT-AV1 3.1.2 (AV1 video encoding)
+
+### Mac
+
+- Added a workaround to avoid a rare crash on Apple Silicon Macs
+
+### Windows
+
+- Fixed some incorrect behaviour on CQ/RF calcuations and handling of presets
+- The app will now automatically disable QSV or NVDec decoders if an out-of-date driver is detected.
+
+
+## HandBrake 1.10.1
+
+### All platforms
+
+#### Video
+
+- Fixed a visual corruption issue that could happen when encoding with x265
+- Fixed SVT-AV1 presets 10, 9, and 8 not working properly with SSIM tune
+
+#### Third-party libraries
+
+- Updated libraries
+  - HarfBuzz 11.4.2 (subtitles)
+
+### Linux
+
+- Fixed preview audio when running the flatpak build
+- Fixed Vorbis passthru checkbox not being applied when the title changes
+
+### Mac
+
+- Improved custom border color validation
+
+### Windows
+
+- Added new translation
+  - Romanian (Română)
+- Fixed arm64 build
+- Fixed audio track name generation
+
 
 ## HandBrake 1.10.0
+
+### All platforms
 
 #### General
 
@@ -19,39 +271,91 @@ Download available from Microsoft:
     - Creation date
     - Cover art
     - Location
+- Fixed an excessive memory usage during the indepth scan (#6963)
 
 #### Command line interface
 
 - Added an option to disable Dolby Vision and HDR10+ passthru
 
+#### Video
+
+- Added an option to choose the encoder color range
+- Improved Framerate Shaper metrics performance for high resolution frames
+- Fixed VCN encoder presets (#6974)
+- Updated NVEnc CQ range (#6418)
+
+#### Audio
+
+- Added an option to disable track names passthru and autonaming
+- Fixed selection behaviour fallback when no audio track is found (#6666)
+- EAC3 + Atmos is now properly signaled in MP4
+
 #### Subtitles
 
+- Addded an option to disable track names passthru
 - SubRip/UTF-8 subtitles are now passed through to MKV without conversion to SSA
+- Fixed a crash that could happen when burning bitmap subtitles
+
+#### Filters
+
+- Fixed a crash that could happen when using the Chroma Smooth filter (#7033)
 
 #### Third-party libraries
 
 - Updated libraries
+  - AMF 1.4.36 (AMD VCN video encoding)
   - FFmpeg 7.1.1 (decoding and filters)
-  - HarfBuzz 10.4.0 (subtitles)
+  - HarfBuzz 11.3.3 (subtitles)
+  - libass 0.17.4 (subtitles)
+  - libdovi 3.3.2 (Dolby Vision dynamic metadata)
+  - libiconv 1.18 (character encoding support)
+  - libjpeg-turbo 3.1.1 (preview image compression)
+  - liblzma (xz) 5.8.1 (LZMA video decoding, e.g. TIFF)
+  - libogg 1.3.6 (Xiph codecs support)
+  - libtheora 1.2.0 (Theora video encoding)
+  - libvpx 1.15.2 (VP8/VP9 video encoding)
   - nv-codec-headers 13.0.19.0 (Nvidia NVENC encoding)
-  - oneVPL 2.14.0 (Intel QSV video encoding/decoding)
-  - SVT-AV1 3.0.0 (AV1 video encoding)
+  - oneVPL 2.15.0 (Intel QSV video encoding/decoding)
+  - SVT-AV1 3.1.0 (AV1 video encoding)
+  - x264 165 r3222 (H.264/AVC video encoding)
+  - x265 r13276 (H.265/HEVC video encoding)
+
+### Linux
+
+- Fixed Opus and Vorbis passthru validation in Webm
+- Fixed a crash that could happen when removing items from queue
+- Fixed audio bitrates list validation (#6997)
+- Built-in presets for unavailable hardware encoders are now hidden
+- Removed orphaned, no longer maintained locales or locales without active translators (af, cs, da, he, hr, ka, no, pl, pt, ro, ru, si, sk, th, tr, uk_UA, zh_TW). Removed locales are welcome back as soon as the locales are updated.
+- Updated existing and maintained locales.
 
 ### Mac
 
+- Added support for the VideoToolbox AV1 hardware decoder
 - Added a Metal accelerated Render Sub filter
 - Added a contextual menu to the presets popover
+- Updated Auto Naming Preferences to add "{angle}" as a filename generation option (#6086)
 - Reduced CPU usage when using VideoToolbox decoders and encoders
+- Encoded files are now excluded from Time Machine until they are completed
+- Fixed queue jobs not being reloaded properly when the source is a .iso file
+- Fixed "Same as source" destination option, it didn't work properly in some case
+- Updated existing and maintained locales
 
 ### Windows
 
 - Added a new preference "Default Range Mode for titles". See Preferences -> Advanced (#6385)
 - Added a new preference to run a custom action when the queue completes. See Preferences -> When Done (#4851)
 - Added "{destination_folder}" as option on the "Encode Completed" "Send File To" option.
+- Added support for DirectX based AV1 video decoding when using the Media Foundation encoder on ARM devices
 - Updated Auto Naming Preferences to add "{angle}" as a filename generation option (#6086)
-- Minor Performance Optimisations for ARM64 devices running Windows
-- Minor UI improvements throughout the UI.
-- Various bug fixes and improvements (#6524, #6517, #6514, #6477, #6473, #6086)
+- Performance Optimisations for ARM64 devices running Windows
+- Minor miscellaneous UI improvements.
+- Various bug fixes and improvements (#6524, #6517, #6514, #6477, #6473, #6086, #6984, #6892, #6999, #7003)
+- Added new translations
+  - Galician (Galego)
+  - Hungarian (Magyar)
+- Removed orphaned, no longer maintained locales or locales without active translators (cs-CZ). Removed locales are welcome back as soon as the locales are updated.
+- Updated existing and maintained locales.
 
 
 ## HandBrake 1.9.2

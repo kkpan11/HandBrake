@@ -1,7 +1,7 @@
 /* unsharp.c
 
    Copyright (c) 2002 Rémi Guyomarch <rguyom at pobox.com>
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -75,6 +75,7 @@ hb_filter_object_t hb_filter_unsharp =
     .id                = HB_FILTER_UNSHARP,
     .enforce_order     = 1,
     .name              = "Sharpen (unsharp)",
+    .short_name        = "unsharp",
     .settings          = NULL,
     .init              = unsharp_init,
     .init_thread       = unsharp_init_thread,
@@ -112,24 +113,7 @@ static void name##_##nbits(const uint8_t *frame_src,                            
                                                                                                 \
     if (!amount)                                                                                \
     {                                                                                           \
-        if (src != dst)                                                                         \
-        {                                                                                       \
-            if (stride_src == stride_dst)                                                       \
-            {                                                                                   \
-                memcpy(dst, src, stride_dst * height);                                          \
-            }                                                                                   \
-            else                                                                                \
-            {                                                                                   \
-                const int size = stride_src < stride_dst ? ABS(stride_src) : stride_dst;        \
-                for (int yy = 0; yy < height; yy++)                                             \
-                {                                                                               \
-                    memcpy(dst, src, size);                                                     \
-                    dst += stride_dst;                                                          \
-                    src += stride_src;                                                          \
-                }                                                                               \
-            }                                                                                   \
-        }                                                                                       \
-                                                                                                \
+        hb_image_copy_plane(frame_dst, frame_src, stride_dst, stride_src, height);              \
         return;                                                                                 \
     }                                                                                           \
                                                                                                 \

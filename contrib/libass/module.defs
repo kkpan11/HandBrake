@@ -7,9 +7,9 @@ endif
 $(eval $(call import.MODULE.defs,LIBASS,libass,$(__deps__)))
 $(eval $(call import.CONTRIB.defs,LIBASS))
 
-LIBASS.FETCH.url     = https://github.com/HandBrake/HandBrake-contribs/releases/download/contribs2/libass-0.17.3.tar.gz
-LIBASS.FETCH.url    += https://github.com/libass/libass/releases/download/0.17.3/libass-0.17.3.tar.gz
-LIBASS.FETCH.sha256  = da7c348deb6fa6c24507afab2dee7545ba5dd5bbf90a137bfe9e738f7df68537
+LIBASS.FETCH.url     = https://github.com/HandBrake/HandBrake-contribs/releases/download/contribs2/libass-0.17.5.tar.gz
+LIBASS.FETCH.url    += https://github.com/libass/libass/releases/download/0.17.5/libass-0.17.5.tar.gz
+LIBASS.FETCH.sha256  = caab4b993dd7be6187c55623b789ed75dddefea6e65938af134637c732fe094a
 
 LIBASS.GCC.args.c_std =
 

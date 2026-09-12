@@ -1,6 +1,6 @@
 /* av1_common.h
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -31,7 +31,7 @@ static const char * const hb_av1_svt_preset_names[] =
 
 static const char * const hb_av1_svt_tune_names[] =
 {
-    "vq", "psnr", "ssim", "fastdecode", NULL
+    "vq", "psnr", "ssim", "iq", "ms-ssim", "vmaf", "fastdecode", NULL
 };
 
 static const char * const hb_av1_svt_profile_names[] =

@@ -549,7 +549,7 @@ Please note, there may be inperfections in the UI layout when using these modes.
   </data>
   <data name="AudioView_Quality" xml:space="preserve">
     <value>Target a specific quality level for audio.
-1 is lowest quality and 5 is highest quality.
+Higher values mean higher quality.
 
 Bitrate will vary source to source.</value>
   </data>
@@ -574,5 +574,8 @@ Bitrate will vary source to source.</value>
   </data>
   <data name="PictureSettingsView_AutomaticKeepAR" xml:space="preserve">
     <value>Changing the displays size will stretch the video</value>
+  </data>
+  <data name="Video_ColourRange" xml:space="preserve">
+    <value>Color Range. Determines the values of the reference black and white. Set to limited to maximize compatibility.</value>
   </data>
 </root>

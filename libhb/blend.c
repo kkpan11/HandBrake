@@ -1,6 +1,6 @@
 /* blend.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -60,6 +60,15 @@ static void blend_subsample_8on1x(const hb_blend_private_t *pv, hb_buffer_t *dst
     // Coordinates of the first chroma sample affected by the overlay
     x0c = x0 & ~((1 << pv->wshift) - 1);
     y0c = y0 & ~((1 << pv->hshift) - 1);
+
+    if (x0c < 0)
+    {
+        x0c = 0;
+    }
+    if (y0c < 0)
+    {
+        y0c = 0;
+    }
 
     width  = (src->f.width  - x0 <= dst->f.width - left) ? src->f.width  : (dst->f.width - left + x0);
     height = (src->f.height - y0 <= dst->f.height - top) ? src->f.height : (dst->f.height - top + y0);
@@ -145,6 +154,15 @@ static void blend_subsample_8onbi1x(const hb_blend_private_t *pv, hb_buffer_t *d
     // Coordinates of the first chroma sample affected by the overlay
     x0c = x0 & ~((1 << pv->wshift) - 1);
     y0c = y0 & ~((1 << pv->hshift) - 1);
+
+    if (x0c < 0)
+    {
+        x0c = 0;
+    }
+    if (y0c < 0)
+    {
+        y0c = 0;
+    }
 
     width  = (src->f.width  - x0 <= dst->f.width - left) ? src->f.width  : (dst->f.width - left + x0);
     height = (src->f.height - y0 <= dst->f.height - top) ? src->f.height : (dst->f.height - top + y0);
@@ -232,6 +250,15 @@ static void blend_subsample_8on8(const hb_blend_private_t *pv, hb_buffer_t *dst,
     x0c = x0 & ~((1 << pv->wshift) - 1);
     y0c = y0 & ~((1 << pv->hshift) - 1);
 
+    if (x0c < 0)
+    {
+        x0c = 0;
+    }
+    if (y0c < 0)
+    {
+        y0c = 0;
+    }
+
     width  = (src->f.width  - x0 <= dst->f.width - left) ? src->f.width  : (dst->f.width - left + x0);
     height = (src->f.height - y0 <= dst->f.height - top) ? src->f.height : (dst->f.height - top + y0);
 
@@ -316,6 +343,15 @@ static void blend_subsample_8onbi8(const hb_blend_private_t *pv, hb_buffer_t *ds
     // Coordinates of the first chroma sample affected by the overlay
     x0c = x0 & ~((1 << pv->wshift) - 1);
     y0c = y0 & ~((1 << pv->hshift) - 1);
+
+    if (x0c < 0)
+    {
+        x0c = 0;
+    }
+    if (y0c < 0)
+    {
+        y0c = 0;
+    }
 
     width  = (src->f.width  - x0 <= dst->f.width - left) ? src->f.width  : (dst->f.width - left + x0);
     height = (src->f.height - y0 <= dst->f.height - top) ? src->f.height : (dst->f.height - top + y0);

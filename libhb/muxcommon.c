@@ -1,6 +1,6 @@
 /* muxcommon.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -649,6 +649,7 @@ static int muxInit( hb_work_object_t * muxer, hb_job_t * job )
         switch( job->mux )
         {
             case HB_MUX_AV_MP4:
+            case HB_MUX_AV_MOV:
             case HB_MUX_AV_MKV:
             case HB_MUX_AV_WEBM:
                 mux->m = hb_mux_avformat_init( job );

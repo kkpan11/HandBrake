@@ -1,6 +1,6 @@
 /* declpcm.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -340,7 +340,7 @@ static hb_buffer_t *Decode( hb_work_object_t *w )
         } break;
     }
 
-    AVChannelLayout channel_layout;
+    AVChannelLayout channel_layout = {0};
     av_channel_layout_from_mask(&channel_layout, hdr2layout[pv->nchannels - 1]);
     hb_audio_resample_set_ch_layout(pv->resample,
                                     &channel_layout);
@@ -394,6 +394,7 @@ static int declpcmBSInfo( hb_work_object_t *w, const hb_buffer_t *b,
     int64_t duration = b->data[0] * 150;
 
     memset( info, 0, sizeof(*info) );
+    info->ch_layout = calloc(1, sizeof(*info->ch_layout));
 
     info->name = "LPCM";
     info->rate.num = rate;
@@ -401,8 +402,7 @@ static int declpcmBSInfo( hb_work_object_t *w, const hb_buffer_t *b,
     info->bitrate = bitrate;
     info->flags = ( b->data[3] << 16 ) | ( b->data[4] << 8 ) | b->data[5];
     info->matrix_encoding = AV_MATRIX_ENCODING_NONE;
-    info->channel_layout = hdr2layout[nchannels - 1];
-    info->channel_map = &hb_libav_chan_map;
+    av_channel_layout_from_mask(info->ch_layout, hdr2layout[nchannels - 1]);
     info->sample_bit_depth = sample_size;
     info->samples_per_frame = ( duration * rate ) / 90000;
 

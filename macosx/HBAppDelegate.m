@@ -20,7 +20,7 @@
 #import "HBController.h"
 
 #define PRESET_FILE @"UserPresets.json"
-#define QUEUE_FILE @"Queue.hbqueue"
+#define QUEUE_FILE @"QueueV2.hbqueue"
 
 @interface HBAppDelegate () <NSMenuItemValidation>
 
@@ -180,6 +180,7 @@
 - (void)applicationWillTerminate:(NSNotification *)notification
 {
     [self.presetsManager savePresets];
+    [self cleanPreviews];
 
     [NSUserDefaults.standardUserDefaults setBool:_queueController.window.isVisible forKey:@"QueueWindowIsOpen"];
     [NSUserDefaults.standardUserDefaults setBool:_outputPanel.window.isVisible forKey:@"OutputPanelIsOpen"];
@@ -367,7 +368,7 @@
 
 - (IBAction)openForums:(id)sender
 {
-    [NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:@"https://forum.handbrake.fr/"]];
+    [NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:@"https://handbrake.fr/community.php"]];
 }
 - (IBAction)openUserGuide:(id)sender
 {

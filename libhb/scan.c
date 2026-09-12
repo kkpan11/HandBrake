@@ -1,6 +1,6 @@
 /* scan.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -295,6 +295,14 @@ static void ScanFunc( void * _data )
         /* Decode previews */
         /* this will also detect more AC3 / DTS information */
         npreviews = DecodePreviews( data, title, 1 );
+        if (npreviews == 0 && data->hw_decode)
+        {
+            // Try without the hardware decoder
+            // Some hwaccel implementations don't automatically
+            // fall back to the software encoder
+            data->hw_decode = 0;
+            npreviews = DecodePreviews( data, title, 1 );
+        }
         if (npreviews < 2)
         {
             // Try harder to get some valid frames
@@ -705,38 +713,20 @@ static int DecodePreviews( hb_scan_t * data, hb_title_t * title, int flush )
         return 0;
     }
 
-    int hw_decode = 0;
-
-    if (data->hw_decode == HB_DECODE_SUPPORT_NVDEC &&
-        hb_hwaccel_available(title->video_codec_param, "cuda"))
-    {
-        hw_decode = HB_DECODE_SUPPORT_NVDEC;
-    }
-    else if (data->hw_decode == HB_DECODE_SUPPORT_VIDEOTOOLBOX &&
-             hb_hwaccel_available(title->video_codec_param, "videotoolbox"))
-    {
-        hw_decode = HB_DECODE_SUPPORT_VIDEOTOOLBOX;
-    }
-    else if (data->hw_decode == HB_DECODE_SUPPORT_QSV &&
-             hb_hwaccel_available(title->video_codec_param, "qsv"))
-    {
-        hw_decode = HB_DECODE_SUPPORT_QSV;
-    }
-    else if (data->hw_decode == HB_DECODE_SUPPORT_MF &&
-             hb_hwaccel_available(title->video_codec_param, "d3d11va"))
-    {
-        hw_decode = HB_DECODE_SUPPORT_MF;
-    }
-
     void *hw_device_ctx = NULL;
-    if (hw_decode)
+    hb_hwaccel_t *hwaccel = hb_get_hwaccel(data->hw_decode);
+
+    if (hwaccel &&
+        hwaccel->caps & HB_HWACCEL_CAP_SCAN &&
+        hb_hwaccel_is_available(hwaccel, title->video_codec_param))
     {
-        hb_hwaccel_hw_ctx_init(title->video_codec_param, hw_decode, &hw_device_ctx, NULL);
+        hb_hwaccel_hw_device_ctx_init(hwaccel->type, -1, &hw_device_ctx);
     }
 
     hb_work_object_t *vid_decoder = hb_get_work(data->h, title->video_codec);
     vid_decoder->codec_param = title->video_codec_param;
     vid_decoder->hw_device_ctx = hw_device_ctx;
+    vid_decoder->hw_accel = hwaccel;
     vid_decoder->title = title;
 
     if (vid_decoder->init(vid_decoder, NULL))
@@ -746,7 +736,7 @@ static int DecodePreviews( hb_scan_t * data, hb_title_t * title, int flush )
         crop_record_free(crops);
         free( vid_decoder );
         hb_stream_close(&stream);
-        hb_hwaccel_hw_ctx_close(&hw_device_ctx);
+        hb_hwaccel_hw_device_ctx_close(&hw_device_ctx);
         return 0;
     }
 
@@ -763,7 +753,7 @@ static int DecodePreviews( hb_scan_t * data, hb_title_t * title, int flush )
             vid_decoder->close( vid_decoder );
             free( vid_decoder );
             hb_stream_close(&stream);
-            hb_hwaccel_hw_ctx_close(&hw_device_ctx);
+            hb_hwaccel_hw_device_ctx_close(&hw_device_ctx);
             return 0;
         }
         if (data->bd)
@@ -1086,7 +1076,7 @@ skip_preview:
     vid_decoder->close( vid_decoder );
     free( vid_decoder );
 
-    hb_hwaccel_hw_ctx_close(&hw_device_ctx);
+    hb_hwaccel_hw_device_ctx_close(&hw_device_ctx);
 
     if (stream != NULL)
     {
@@ -1221,12 +1211,15 @@ skip_preview:
             title->color_transfer = hb_get_color_transfer(title->color_transfer);
             title->color_matrix   = hb_get_color_matrix(title->color_matrix, vid_info.geometry);
         }
-        else if (title->dovi.dv_profile == 5 ||
-                 (title->dovi.dv_profile == 10 && title->dovi.dv_bl_signal_compatibility_id == 0))
+        else if ((title->dovi.dv_profile == 5 ||
+                 (title->dovi.dv_profile == 10 && title->dovi.dv_bl_signal_compatibility_id == 0)) &&
+                 (title->color_prim == HB_COLR_PRI_UNDEF     ||
+                  title->color_transfer == HB_COLR_TRA_UNDEF ||
+                  title->color_matrix   == HB_COLR_MAT_UNDEF))
         {
-            title->color_prim     = HB_COLR_PRI_UNDEF;
-            title->color_transfer = HB_COLR_TRA_UNDEF;
-            title->color_matrix   = HB_COLR_MAT_UNDEF;
+            title->color_prim     = HB_COLR_PRI_BT2020;
+            title->color_transfer = HB_COLR_TRA_SMPTEST2084;
+            title->color_matrix   = HB_COLR_MAT_IPT_C2;
         }
         else
         {
@@ -1403,12 +1396,26 @@ skip_preview:
             hb_log("scan: hdr10+ dynamic metadata found");
         }
 
-        if (title->video_decode_support != HB_DECODE_SUPPORT_SW)
+        if (title->spherical_mapping.projection > HB_SPHERICAL_UNSET)
         {
-            hb_log("scan: supported video decoders:%s%s%s",
-                   !(title->video_decode_support & HB_DECODE_SUPPORT_SW)      ? "" : " avcodec",
-                   !(title->video_decode_support & HB_DECODE_SUPPORT_QSV)     ? "" : " qsv",
-                   !(title->video_decode_support & HB_DECODE_SUPPORT_HWACCEL) ? "" : " hwaccel");
+            hb_log("scan: spherical mapping: %s",
+                   av_spherical_projection_name(title->spherical_mapping.projection));
+        }
+
+        if (title->stereo_3d.type > HB_STEREO3D_UNSET)
+        {
+            hb_log("scan: stereo 3d: %s",
+                   av_stereo3d_type_name(title->stereo_3d.type));
+        }
+
+        if (title->video_decode_support != HB_DECODE_SW)
+        {
+            hb_log("scan: supported video decoders:%s%s%s%s%s",
+                   !(title->video_decode_support & HB_DECODE_SW)      ? "" : " avcodec",
+                   !(title->video_decode_support & HB_DECODE_QSV)     ? "" : " qsv",
+                   !(title->video_decode_support & HB_DECODE_AMFDEC)  ? "" : " amfdec",
+                   !(title->video_decode_support & HB_DECODE_NVDEC)   ? "" : " nvdec",
+                   !(title->video_decode_support & HB_DECODE_VIDEOTOOLBOX)  ? "" : " videotoolbox");
         }
 
         if (interlaced_preview_count && interlaced_preview_count >= (npreviews / 2))
@@ -1508,6 +1515,8 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
         hb_buffer_t * tmp;
         tmp = hb_fifo_get( audio->priv.scan_cache );
         hb_buffer_close( &tmp );
+        av_channel_layout_uninit(info.ch_layout);
+        free(info.ch_layout);
         free( w );
         audio->priv.scan_error_count++;
         return;
@@ -1517,6 +1526,8 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
         // didn't find any info
         // Additional buffer data may be required to obtain
         // audio attributes
+        av_channel_layout_uninit(info.ch_layout);
+        free(info.ch_layout);
         free( w );
         return;
     }
@@ -1528,8 +1539,8 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
     audio->config.in.samples_per_frame = info.samples_per_frame;
     audio->config.in.bitrate = info.bitrate;
     audio->config.in.matrix_encoding = info.matrix_encoding;
-    audio->config.in.channel_layout = info.channel_layout;
-    audio->config.in.channel_map = info.channel_map;
+    audio->config.in.ch_layout = calloc(1, sizeof(*audio->config.in.ch_layout));
+    av_channel_layout_copy(audio->config.in.ch_layout, info.ch_layout);
     audio->config.in.version = info.version;
     audio->config.in.flags = info.flags;
     audio->config.in.mode = info.mode;
@@ -1625,6 +1636,24 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
                 case AV_CODEC_ID_VORBIS:
                     codec_name = "Vorbis";
                     break;
+                case AV_CODEC_ID_PCM_S16BE:
+                case AV_CODEC_ID_PCM_S16LE:
+                case AV_CODEC_ID_PCM_S24BE:
+                case AV_CODEC_ID_PCM_S24LE:
+                case AV_CODEC_ID_PCM_S32BE:
+                case AV_CODEC_ID_PCM_S32LE:
+                case AV_CODEC_ID_PCM_U16BE:
+                case AV_CODEC_ID_PCM_U16LE:
+                case AV_CODEC_ID_PCM_U24BE:
+                case AV_CODEC_ID_PCM_U24LE:
+                case AV_CODEC_ID_PCM_U32BE:
+                case AV_CODEC_ID_PCM_U32LE:
+                case AV_CODEC_ID_PCM_F32BE:
+                case AV_CODEC_ID_PCM_F32LE:
+                case AV_CODEC_ID_PCM_F64BE:
+                case AV_CODEC_ID_PCM_F64LE:
+                    codec_name = "PCM";
+                    break;
                 default:
                     codec_name = codec->name;
                     break;
@@ -1669,8 +1698,11 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
                 case HB_ACODEC_MP3:
                     codec_name = "MP3";
                     break;
-                case AV_CODEC_ID_VORBIS:
+                case HB_ACODEC_VORBIS:
                     codec_name = "Vorbis";
+                    break;
+                case HB_ACODEC_PCM:
+                    codec_name = "PCM";
                     break;
                 default:
                     codec_name = "Unknown (libav)";
@@ -1734,11 +1766,10 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
                 strlen(audio->config.lang.description) - 1);
     }
 
-    if (audio->config.in.channel_layout)
+    if (audio->config.in.ch_layout->nb_channels)
     {
-        int lfes     = (!!(audio->config.in.channel_layout & AV_CH_LOW_FREQUENCY) +
-                        !!(audio->config.in.channel_layout & AV_CH_LOW_FREQUENCY_2));
-        int channels = hb_layout_get_discrete_channel_count(audio->config.in.channel_layout);
+        int lfes     = hb_layout_get_low_freq_channel_count(audio->config.in.ch_layout);
+        int channels = hb_layout_get_discrete_channel_count(audio->config.in.ch_layout);
         char *desc   = audio->config.lang.description +
                         strlen(audio->config.lang.description);
         size_t size = sizeof(audio->config.lang.description) - strlen(audio->config.lang.description);
@@ -1793,6 +1824,8 @@ static void LookForAudio(hb_scan_t *scan, hb_title_t * title, hb_audio_t * audio
             info.name, audio->config.in.samplerate, audio->config.in.bitrate,
             audio->config.lang.description );
 
+    av_channel_layout_uninit(info.ch_layout);
+    free(info.ch_layout);
     free( w );
     return;
 

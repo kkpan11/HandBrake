@@ -1,6 +1,6 @@
 /* videohandler.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -382,6 +382,16 @@ framerate_changed_cb (GtkWidget *widget, gpointer data)
 
 G_MODULE_EXPORT void
 framerate_mode_changed_cb (GtkWidget *widget, gpointer data)
+{
+    signal_user_data_t *ud = ghb_ud();
+    ghb_widget_to_setting(ud->settings, widget);
+    ghb_update_summary_info(ud);
+    ghb_clear_presets_selection(ud);
+    ghb_live_reset(ud);
+}
+
+G_MODULE_EXPORT void
+color_range_changed_cb (GtkWidget *widget, gpointer data)
 {
     signal_user_data_t *ud = ghb_ud();
     ghb_widget_to_setting(ud->settings, widget);

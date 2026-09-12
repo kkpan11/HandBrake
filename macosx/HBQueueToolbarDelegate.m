@@ -109,6 +109,8 @@
             item.controlRepresentation = NSToolbarItemGroupControlRepresentationCollapsed;
             item.label = label;
             item.paletteLabel = label;
+            item.toolTip = NSLocalizedString(@"Select an action to run when the queue is done",
+                                             @"Queue Window When Done Toolbar Item");
 
             [item bind:@"selectedIndex"
               toObject:NSUserDefaultsController.sharedUserDefaultsController
@@ -165,8 +167,19 @@
             NSMenuToolbarItem *item = [[NSMenuToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
             item.label = label;
             item.paletteLabel = label;
+            item.toolTip = NSLocalizedString(@"Perform tasks with the selected items", @"Queue Window Action Toolbar Item");
             item.menu = menu;
-            [item HB_setSymbol:@"ellipsis.circle" configuration:nil fallbackImage:@"NSActionTemplate"];
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 160000
+            if (@available(macOS 26, *))
+            {
+                [item HB_setSymbol:@"ellipsis" configuration:nil fallbackImage:@"NSActionTemplate"];
+                item.showsIndicator = NO;
+            }
+            else
+#endif
+            {
+                [item HB_setSymbol:@"ellipsis.circle" configuration:nil fallbackImage:@"NSActionTemplate"];
+            }
             return item;
         }
         else
@@ -192,14 +205,16 @@
     }
     else if ([itemIdentifier isEqualToString:TOOLBAR_DETAILS])
     {
-        return [NSToolbarItem HB_toolbarItemWithIdentifier:itemIdentifier
-                                                     label:NSLocalizedString(@"Details", @"Queue Window Details Toolbar Item")
-                                              paletteLabel:NSLocalizedString(@"Details", @"Queue Window Details Toolbar Item")
-                                                symbolName:@"sidebar.right"
-                                                     image:@"details"
-                                                     style:HBToolbarItemStyleBordered | HBToolbarItemStyleButton
-                                                    target:self.target
-                                                    action:@selector(toggleDetails:)];
+        NSToolbarItem *item = [NSToolbarItem HB_toolbarItemWithIdentifier:itemIdentifier
+                                                                    label:NSLocalizedString(@"Details", @"Queue Window Details Toolbar Item")
+                                                             paletteLabel:NSLocalizedString(@"Details", @"Queue Window Details Toolbar Item")
+                                                               symbolName:@"sidebar.right"
+                                                                    image:@"details"
+                                                                    style:HBToolbarItemStyleBordered | HBToolbarItemStyleButton
+                                                                   target:self.target
+                                                                   action:@selector(toggleDetails:)];
+        item.toolTip = NSLocalizedString(@"Toggle details sidebar", @"Queue Window Details Toolbar Item");
+        return item;
     }
     else if ([itemIdentifier isEqualToString:TOOLBAR_QUICKLOOK])
     {

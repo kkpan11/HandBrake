@@ -1,6 +1,6 @@
 /* stream.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -4293,6 +4293,7 @@ static int do_probe(hb_stream_t *stream, hb_pes_stream_t *pes, hb_buffer_t *buf)
                 { "h263"     , AV_CODEC_ID_H263       },
                 { "mjpeg"    , AV_CODEC_ID_MJPEG      },
                 { "vc1"      , AV_CODEC_ID_VC1        },
+                { "pcm"      , AV_CODEC_ID_PCM_S16BE  },
                 { 0 },
             };
             for( i = 0; fmt_id_type[i].name; i++ )
@@ -5123,7 +5124,7 @@ hb_buffer_t * hb_ts_decode_pkt( hb_stream_t *stream, const uint8_t * pkt,
                 if ((pes[7] >> 6) != 0)
                 {
                     // if we have a dts use it otherwise use the pts
-                    // We simulate a psuedo-PCR here by sampling a timestamp
+                    // We simulate a pseudo-PCR here by sampling a timestamp
                     // about every 600ms.
                     int64_t timestamp;
                     timestamp = pes_timestamp(pes + (pes[7] & 0x40 ? 14 : 9));
@@ -5593,6 +5594,25 @@ static void add_ffmpeg_audio(hb_title_t *title, hb_stream_t *stream, int id)
 
         case AV_CODEC_ID_MP3:
             audio->config.in.codec = HB_ACODEC_MP3;
+            break;
+
+        case AV_CODEC_ID_PCM_S16BE:
+        case AV_CODEC_ID_PCM_S16LE:
+        case AV_CODEC_ID_PCM_S24BE:
+        case AV_CODEC_ID_PCM_S24LE:
+        case AV_CODEC_ID_PCM_S32BE:
+        case AV_CODEC_ID_PCM_S32LE:
+        case AV_CODEC_ID_PCM_U16BE:
+        case AV_CODEC_ID_PCM_U16LE:
+        case AV_CODEC_ID_PCM_U24BE:
+        case AV_CODEC_ID_PCM_U24LE:
+        case AV_CODEC_ID_PCM_U32BE:
+        case AV_CODEC_ID_PCM_U32LE:
+        case AV_CODEC_ID_PCM_F32BE:
+        case AV_CODEC_ID_PCM_F32LE:
+        case AV_CODEC_ID_PCM_F64BE:
+        case AV_CODEC_ID_PCM_F64LE:
+            audio->config.in.codec = HB_ACODEC_PCM;
             break;
 
         case AV_CODEC_ID_VORBIS:
@@ -6125,6 +6145,18 @@ static hb_title_t *ffmpeg_title_scan( hb_stream_t *stream, hb_title_t *title )
                         title->dovi = hb_dovi_ff_to_hb(*dovi);
                         break;
                     }
+                    case AV_PKT_DATA_STEREO3D:
+                    {
+                        AVStereo3D *stereo = (AVStereo3D *)sd.data;
+                        title->stereo_3d = hb_stereo_3d_ff_to_hb(*stereo);
+                        break;
+                    }
+                    case AV_PKT_DATA_SPHERICAL:
+                    {
+                        AVSphericalMapping *spherical_mapping = (AVSphericalMapping *)sd.data;
+                        title->spherical_mapping = hb_spherical_ff_to_hb(*spherical_mapping);
+                        break;
+                    }
                     default:
                         break;
                 }
@@ -6182,15 +6214,40 @@ static hb_title_t *ffmpeg_title_scan( hb_stream_t *stream, hb_title_t *title )
     {
         AVChapter *m;
         uint64_t duration_sum = 0;
+        uint64_t nb_chapters = 1;
+
         for( i = 0; i < ic->nb_chapters; i++ )
+        {
             if( ( m = ic->chapters[i] ) != NULL )
             {
+                // hb_chapter_t stores only the duration,
+                // so if the first chapter does not start at the
+                // beginning, we need to an additional entry
+                if (i == 0 && ic->nb_chapters > 1 && m->start != 0)
+                {
+                    hb_chapter_t *chapter = calloc(sizeof(hb_chapter_t), 1);
+                    chapter->index = nb_chapters++;
+
+                    chapter->duration = ic->chapters[0]->start * 90000 *
+                                        m->time_base.num / m->time_base.den;
+                    duration_sum     += chapter->duration;
+
+                    int seconds      = (chapter->duration + 45000) / 90000;
+                    chapter->hours   = (seconds / 3600);
+                    chapter->minutes = (seconds % 3600) / 60;
+                    chapter->seconds = (seconds % 60);
+
+                    hb_chapter_set_title(chapter, "Chapter 1");
+
+                    hb_list_add(title->list_chapter, chapter);
+                }
+
                 AVDictionaryEntry * tag;
                 hb_chapter_t      * chapter;
                 int64_t             end;
 
                 chapter = calloc(sizeof(hb_chapter_t), 1);
-                chapter->index    = i + 1;
+                chapter->index = nb_chapters++;
 
                 /* AVChapter.end is not guaranteed to be set.
                  * Calculate chapter durations based on AVChapter.start.
@@ -6259,6 +6316,7 @@ static hb_title_t *ffmpeg_title_scan( hb_stream_t *stream, hb_title_t *title )
 
                 hb_list_add( title->list_chapter, chapter );
             }
+        }
     }
 
     iconv_close(iconv_context);

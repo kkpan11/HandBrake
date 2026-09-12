@@ -9,23 +9,23 @@ concurrency:
 jobs:
   build:
     name: Build on macOS
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
+    - uses: actions/checkout@v7
+    - uses: actions/setup-python@v7
       with:
-        python-version: '3.12.3'
+        python-version: '3.13.7'
 
     - name: Toolchain Cache
       id: mac-toolchain
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/mac-toolchain
         key: ${{ runner.os }}-${{ runner.arch }}-toolchain-${{ hashFiles('**/scripts/mac-toolchain-build') }}
 
     - name: Cargo-C Toolchain Cache
       id: mac-cargo-c-toolchain
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           ~/.cargo/bin/cargo-capi
@@ -37,6 +37,7 @@ jobs:
       run: |
         echo ~/mac-toolchain/bin >> $GITHUB_PATH
         rustup target add x86_64-apple-darwin
+        xcodebuild -downloadComponent MetalToolchain
 
     - name: Setup Toolchain
       if: steps.mac-toolchain.outputs.cache-hit != 'true'
@@ -56,7 +57,7 @@ jobs:
         make ub && make pkg.create
 
     - name: Upload Assets
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HandBrake-macos
         path: ./build/pkg

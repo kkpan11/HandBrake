@@ -450,10 +450,17 @@ namespace HandBrake.Interop.Interop
 
                 if (!string.IsNullOrEmpty(this.TitlesJson))
                 {
-                    this.Titles = JsonSerializer.Deserialize<JsonScanObject>(this.TitlesJson, JsonSettings.Options);
-                    if (this.Titles != null)
+                    try
                     {
-                        this.FeatureTitle = this.Titles.MainFeature;
+                        this.Titles = JsonSerializer.Deserialize<JsonScanObject>(this.TitlesJson, JsonSettings.Options);
+                        if (this.Titles != null)
+                        {
+                            this.FeatureTitle = this.Titles.MainFeature;
+                        }
+                    }
+                    catch (Exception exc)
+                    {
+                        HandBrakeUtils.SendErrorEvent(exc.ToString());
                     }
                 }
 
@@ -571,6 +578,19 @@ namespace HandBrake.Interop.Interop
                    a.Pass == b.Pass &&
                    a.PassCount == b.PassCount &&
                    a.StateCode == b.StateCode;
+        }
+
+        public void Terminate()
+        {
+            try
+            {
+                this.StopEncode();
+                this.StopScan();
+            }
+            catch (Exception e)
+            { 
+                Debug.WriteLine(e); // We don't care about this exception.
+            }
         }
     }
 }

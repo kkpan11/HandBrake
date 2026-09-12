@@ -1,6 +1,6 @@
 /* ports.h
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -57,6 +57,13 @@ hb_display_t * hb_display_init(const char         * driver_name,
                                const uint32_t       dri_render_node,
                                const char * const * interface_names);
 void           hb_display_close(hb_display_t ** _d);
+
+/************************************************************************
+ * Operating system info utilities
+ ***********************************************************************/
+const char * hb_get_system_name(void);
+const char * hb_get_system_version(void);
+const char * hb_get_system_build(void);
 
 /************************************************************************
  * CPU info utilities
@@ -130,6 +137,7 @@ char * hb_strndup(const char * src, size_t len);
 /************************************************************************
  * File utils
  ***********************************************************************/
+void hb_set_temporary_directory(const char *tmp_dir);
 const char * hb_get_temporary_directory(void);
 char * hb_get_temporary_filename( char *fmt, ... );
 size_t hb_getline(char **lineptr, size_t *n, FILE *fp);

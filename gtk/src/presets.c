@@ -1,6 +1,6 @@
 /* presets.c
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -514,11 +514,15 @@ ghb_preset_to_settings(GhbValue *settings, GhbValue *preset)
                     break;
                 case HB_ACODEC_VORBIS:
                 case HB_ACODEC_VORBIS_PASS:
-                    ghb_dict_set_bool(settings, "AudioAllowOPUSPass", 1);
+                    ghb_dict_set_bool(settings, "AudioAllowVORBISPass", 1);
                     break;
                 case HB_ACODEC_OPUS:
                 case HB_ACODEC_OPUS_PASS:
                     ghb_dict_set_bool(settings, "AudioAllowOPUSPass", 1);
+                    break;
+                case HB_ACODEC_PCM:
+                case HB_ACODEC_PCM_PASS:
+                    ghb_dict_set_bool(settings, "AudioAllowPCMPass", 1);
                     break;
             }
         }
@@ -1283,6 +1287,25 @@ preset_reload_action_cb(GSimpleAction *action, GVariant *param,
     }
 }
 
+static gboolean
+video_encoder_is_hw_encoder (const char *encoder_name)
+{
+    const char *hw_prefixes[] = {
+        "qsv_",
+        "vce_",
+        "nvenc_",
+        "mf_",
+        "vt_",
+    };
+
+    for (int i = 0; i < G_N_ELEMENTS(hw_prefixes); i++)
+    {
+        if (!strncmp(encoder_name, hw_prefixes[i], strlen(hw_prefixes[i])))
+            return TRUE;
+    }
+    return FALSE;
+}
+
 void
 ghb_presets_menu_init(signal_user_data_t *ud)
 {
@@ -1343,6 +1366,7 @@ ghb_presets_menu_init(signal_user_data_t *ud)
                     int           preset_type;
                     const gchar * name;
                     GString     * preset_str = g_string_new(folder_str->str);
+                    gboolean      preset_enabled = TRUE;
 
                     dict        = ghb_array_get(folder, jj);
                     name        = ghb_dict_get_string(dict, "PresetName");
@@ -1359,15 +1383,34 @@ ghb_presets_menu_init(signal_user_data_t *ud)
                     {
                         continue;
                     }
+                    // Don't show official presets that use an unavailable hardware encoder
+                    // User-created presets are shown but disabled
+                    const char *encoder_name = ghb_dict_get_string(dict, "VideoEncoder");
+                    if (video_encoder_is_hw_encoder(encoder_name))
+                    {
+                        int encoder_id = hb_video_encoder_get_from_name(encoder_name);
+                        if (!hb_video_encoder_is_supported(encoder_id))
+                        {
+                            if (type == HB_PRESET_TYPE_OFFICIAL)
+                                continue;
+                            else
+                                preset_enabled = FALSE;
+                        }
+                    }
+
                     g_string_append(preset_str, "/");
                     g_string_append_uri_escaped(preset_str, name, NULL, TRUE);
 
                     char * preset_path;
                     char * detail_action;
 
+                    g_string_replace(preset_str, "'", "\\'", 0);
                     preset_path = g_string_free(preset_str, FALSE);
-                    detail_action = g_strdup_printf("app.preset-select('%s')",
-                                                    preset_path);
+                    if (preset_enabled)
+                        detail_action = g_strdup_printf("app.preset-select('%s')", preset_path);
+                    else
+                        detail_action = g_strdup_printf("UNAVAILABLE");
+
                     g_menu_append(submenu, name, detail_action);
                     g_free(preset_path);
                     g_free(detail_action);
@@ -1757,6 +1800,10 @@ GhbValue* ghb_create_copy_mask(GhbValue *settings)
     {
         ghb_array_append(copy_mask, ghb_string_value_new("copy:opus"));
     }
+    if (ghb_dict_get_bool(settings, "AudioAllowPCMPass"))
+    {
+        ghb_array_append(copy_mask, ghb_string_value_new("copy:pcm"));
+    }
     return copy_mask;
 }
 
@@ -2124,7 +2171,7 @@ preset_import_response_cb (GtkFileChooser *chooser, GtkResponseType response,
                     _("Overwrite Preset?"),
                     _("The preset “%s” already exists. Do you want to overwrite it?"),
                     preset_name);
-            gtk_widget_show(GTK_WIDGET(overwrite_dialog));
+            gtk_widget_set_visible(GTK_WIDGET(overwrite_dialog), TRUE);
             g_signal_connect(overwrite_dialog, "response", G_CALLBACK(preset_write_response), data);
         }
         else
@@ -2507,7 +2554,7 @@ preset_save_as_response_cb (GtkDialog *dialog, int response,
                     _("The preset “%s” already exists. Do you want to overwrite it?"),
                     name);
             g_signal_connect(overwrite, "response", G_CALLBACK(preset_save_as_write_cb), dialog);
-            gtk_widget_show(GTK_WIDGET(overwrite));
+            gtk_widget_set_visible(GTK_WIDGET(overwrite), TRUE);
         }
         else
         {

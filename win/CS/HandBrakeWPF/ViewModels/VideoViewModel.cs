@@ -15,12 +15,14 @@ namespace HandBrakeWPF.ViewModels
     using System.Globalization;
     using System.Linq;
 
+    using HandBrake.App.Core.Utilities;
     using HandBrake.Interop.Interop;
     using HandBrake.Interop.Interop.Interfaces.Model;
     using HandBrake.Interop.Interop.Interfaces.Model.Encoders;
 
     using HandBrakeWPF.EventArgs;
     using HandBrakeWPF.Model;
+    using HandBrakeWPF.Model.Video;
     using HandBrakeWPF.Properties;
     using HandBrakeWPF.Services.Interfaces;
     using HandBrakeWPF.Services.Presets.Model;
@@ -31,7 +33,6 @@ namespace HandBrakeWPF.ViewModels
     using EncodeTask = Services.Encode.Model.EncodeTask;
     using FramerateMode = Services.Encode.Model.Models.FramerateMode;
     using OutputFormat = Services.Encode.Model.Models.OutputFormat;
-    using SettingChangedEventArgs = EventArgs.SettingChangedEventArgs;
     using VideoEncodeRateType = Model.Video.VideoEncodeRateType;
     using VideoLevel = Services.Encode.Model.Models.Video.VideoLevel;
     using VideoPreset = Services.Encode.Model.Models.Video.VideoPreset;
@@ -40,7 +41,8 @@ namespace HandBrakeWPF.ViewModels
 
     public class VideoViewModel : ViewModelBase, IVideoViewModel
     {
-        private const string SameAsSource = "Same as source";
+        private static readonly string SameAsSource = Resources.VideoView_SameAsSource;
+
         private readonly IUserSettingService userSettingService;
 
         private bool displayOptimiseOptions;
@@ -126,6 +128,8 @@ namespace HandBrakeWPF.ViewModels
                 this.OnTabStatusChanged(null);
             }
         }
+
+        public BindingList<VideoColourRange> ColourRanges => new BindingList<VideoColourRange>(EnumHelper<VideoColourRange>.GetEnumList().ToList());
 
         public bool IsMultiPassEnabled
         {
@@ -260,6 +264,18 @@ namespace HandBrakeWPF.ViewModels
             }
         }
 
+        public VideoColourRange ColourRange
+        {
+            get => this.Task.VideoColourRange;
+
+            set
+            {
+                this.Task.VideoColourRange = value;
+                this.NotifyOfPropertyChange(() => this.ColourRange);
+                this.OnTabStatusChanged(null);
+            }
+        }
+
         public HDRDynamicMetadata PasshtruHDRDynamicMetadata
         {
             get => this.Task.PasshtruHDRDynamicMetadata;
@@ -288,7 +304,7 @@ namespace HandBrakeWPF.ViewModels
             {
                 if (this.Task.Framerate == null)
                 {
-                    return "Same as source";
+                    return SameAsSource;
                 }
 
                 return this.Task.Framerate.Value.ToString(CultureInfo.InvariantCulture);
@@ -296,7 +312,7 @@ namespace HandBrakeWPF.ViewModels
 
             set
             {
-                if (value == "Same as source" || value == null)
+                if (value == SameAsSource || value == null)
                 {
                     this.Task.Framerate = null;
                     this.ShowPeakFramerate = false;
@@ -625,7 +641,7 @@ namespace HandBrakeWPF.ViewModels
             this.TurboAnalysisPass = preset.Task.TurboAnalysisPass;
 
             this.VideoBitrate = preset.Task.VideoEncodeRateType == VideoEncodeRateType.AverageBitrate ? preset.Task.VideoBitrate : null;
-
+            this.ColourRange = preset.Task.VideoColourRange;
             this.NotifyOfPropertyChange(() => this.Task);
 
             this.HandleEncoderChange(preset.Task.VideoEncoder);
@@ -679,6 +695,7 @@ namespace HandBrakeWPF.ViewModels
             this.NotifyOfPropertyChange(() => this.IsVariableFramerate);
             this.NotifyOfPropertyChange(() => this.SelectedVideoEncoder);
             this.NotifyOfPropertyChange(() => this.SelectedFramerate);
+            this.NotifyOfPropertyChange(() => this.ColourRange);
             this.NotifyOfPropertyChange(() => this.QualityMax);
             this.NotifyOfPropertyChange(() => this.QualityMin);
             this.NotifyOfPropertyChange(() => this.RF);
@@ -817,6 +834,11 @@ namespace HandBrakeWPF.ViewModels
                 this.SelectedVideoEncoder = HandBrakeEncoderHelpers.VideoEncoders.First(s => s.IsX264);
             }
 
+            if (this.SelectedVideoEncoder != null && this.Task.OutputFormat == OutputFormat.Mov && !this.SelectedVideoEncoder.SupportsMOV)
+            {
+                this.SelectedVideoEncoder = HandBrakeEncoderHelpers.VideoEncoders.First(s => s.IsX264);
+            }
+
             if (this.SelectedVideoEncoder != null && this.Task.OutputFormat == OutputFormat.WebM && !this.SelectedVideoEncoder.SupportsWebM)
             {
                 this.SelectedVideoEncoder = HandBrakeEncoderHelpers.VideoEncoders.First(s => s.IsVP9);
@@ -924,8 +946,15 @@ namespace HandBrakeWPF.ViewModels
                 }
                 else // Supporting negative ranges
                 {
-                    float augment = limits.Low > 0 ? 0 : (limits.Low * -1);
-                    this.RF = (int)(limits.High * cqStep) - ((int)(quality * cqStep) - (int)(limits.Low * cqStep));
+                    if (quality >= 0)
+                    {
+                        this.RF = (int)(limits.High * cqStep) - ((int)(quality * cqStep) - (int)(limits.Low * cqStep));
+                    }
+                    else
+                    {
+                        int augment = limits.Low >= 0 ? 0 : (int)(limits.Low * cqStep) * -1; // Handle negative ranges
+                        this.RF = (int)(limits.High * cqStep) - augment + (int)(quality * cqStep * -1);
+                    }
                 }
             }
         }
@@ -952,7 +981,9 @@ namespace HandBrakeWPF.ViewModels
             {
                 if (limits.Low > 0)
                 {
-                    sliderValue -= (int)limits.Low; // Handles the non 0 Starting point. MPEG-4, MPEG-2
+                    int invCqStep = (int)(1 / cqStep); // Inverse 
+
+                    sliderValue -= (int)(limits.Low * invCqStep); // Handles the non 0 Starting point. MPEG-4, MPEG-2
                 }
 
                 float augment = limits.Low > 0 ? 0 : (limits.Low * -1); // Handle negative ranges

@@ -1,6 +1,6 @@
 /* util.h
  *
- * Copyright (C) 2008-2025 John Stebbins <stebbins@stebbins>
+ * Copyright (C) 2008-2026 John Stebbins <stebbins@stebbins>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -35,6 +35,6 @@ char *ghb_file_chooser_get_current_folder(GtkFileChooser *chooser);
 gboolean ghb_file_is_subtitle(const char *filename);
 gboolean ghb_file_is_ssa_subtitle(const char *filename);
 gboolean ghb_file_is_srt_subtitle(const char *filename);
-
+char *ghb_format_pretty_size (int64_t bytes);
 G_END_DECLS
 

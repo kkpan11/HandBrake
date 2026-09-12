@@ -443,7 +443,7 @@ The Activity log may have further information.</value>
     <value>An Unknown Error has occurred.</value>
   </data>
   <data name="OptionsViewModel_NewUpdate" xml:space="preserve">
-    <value>A New Update is Available! Please check the website for release notes.</value>
+    <value>HandBrake {0} is now Available! Please check the website for release notes.</value>
   </data>
   <data name="OptionsViewModel_NoNewUpdates" xml:space="preserve">
     <value>There are no new updates at this time.</value>
@@ -899,8 +899,8 @@ Hint: File overwrite behaviour can be controlled in preferences. </value>
   <data name="FiltersView_SharpenTuneAuto" xml:space="preserve">
     <value>Sharpen Tune</value>
   </data>
-  <data name="FiltersView_Tune" xml:space="preserve">
-    <value>Tune:</value>
+  <data name="FilterView_Tune" xml:space="preserve">
+    <value>Tune</value>
   </data>
   <data name="Generic_Add" xml:space="preserve">
     <value>Add</value>
@@ -1035,7 +1035,7 @@ Hint: File overwrite behaviour can be controlled in preferences. </value>
     <value>Preview</value>
   </data>
   <data name="MainView_ProgressStatusWithTask" xml:space="preserve">
-    <value>Encoding: {0}, {1:00.00}%, Time Remaining: {2}, {3}</value>
+    <value>{0}, {1:00.00}%, Time Remaining: {2}</value>
   </data>
   <data name="MainView_Range" xml:space="preserve">
     <value>Range:</value>
@@ -1641,6 +1641,9 @@ VLC and MPC-HC are supported. Other players may also work but are not validated.
   <data name="VideoView_Codec" xml:space="preserve">
     <value>Video Encoder:</value>
   </data>
+  <data name="VideoView_ColourRange" xml:space="preserve">
+    <value>Color Range:</value>
+  </data>
   <data name="VideoView_ConstantFramerate" xml:space="preserve">
     <value>Constant Framerate</value>
   </data>
@@ -2131,7 +2134,7 @@ Where supported, any user presets will have been imported.</value>
     <value>A new version is available!</value>
   </data>
   <data name="About_Copyright" xml:space="preserve">
-    <value>Copyright (C) 2003-2024 The HandBrake Team</value>
+    <value>Copyright (C) 2003-2026 The HandBrake Team</value>
   </data>
   <data name="Options_LowBatteryLevel" xml:space="preserve">
     <value>Low battery level:</value>
@@ -2263,9 +2266,6 @@ Please choose a different preset.</value>
   </data>
   <data name="PictureSettingsResLimitModes_none" xml:space="preserve">
     <value>None</value>
-  </data>
-  <data name="PresetManger_Title" xml:space="preserve">
-    <value>Manage Presets</value>
   </data>
   <data name="ManagePresetView_DeleteBuiltIn" xml:space="preserve">
     <value>Delete Built-in Presets</value>
@@ -2453,8 +2453,7 @@ You can change your choice at any time by changing the options in Preferences -&
     <value>Check for updates?</value>
   </data>
   <data name="OptionsViewModel_UpdateNotice" xml:space="preserve">
-    <value>Before Updating:
-- Make sure there are no pending encodes in the queue. 
+    <value>- Make sure there are no pending encodes in the queue. 
 - Backup or make a note of any custom presets you have created as they may not be fully compatible with newer versions.</value>
   </data>
   <data name="Preset_Default" xml:space="preserve">
@@ -2667,6 +2666,9 @@ This may be due to limitations of the file container you have selected. Please s
   </data>
   <data name="OptionsView_EnableNvDecSupport" xml:space="preserve">
     <value>Prefer use of Nvidia NVDec for decoding video when using the NVEnc encoder and the hardware is available for use.</value>
+  </data>
+  <data name="OptionsView_EnableAmfDecSupport" xml:space="preserve">
+    <value>Prefer use of AMF AMFDec for decoding video when using the AMFEnc encoder and the hardware is available for use.</value>
   </data>
   <data name="Options_Hardware" xml:space="preserve">
     <value>Hardware Support</value>
@@ -2976,5 +2978,157 @@ To allow multiple simultaneous encodes, turn on "Process Isolation" in Tools Men
   </data>
   <data name="QueueView_StartQueueNow" xml:space="preserve">
     <value>Start Queue (Immediately)</value>
+  </data>
+  <data name="AudioTrackNaming_None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AudioTrackNaming_Unnamed" xml:space="preserve">
+    <value>Unnamed Only</value>
+  </data>
+  <data name="AudioTrackNaming_All" xml:space="preserve">
+    <value>All Tracks</value>
+  </data>
+  <data name="AudioDefaultsView_NamingBehaviour" xml:space="preserve">
+    <value>Track Naming Behaviour:</value>
+  </data>
+  <data name="AudioDefaultsView_AutoNaming" xml:space="preserve">
+    <value>Autonaming:</value>
+  </data>
+  <data name="AudioDefaultsView_PassthruTrackNames" xml:space="preserve">
+    <value>Passthru Track Names</value>
+  </data>
+  <data name="SubtitlesDefaultsView_PassthruTrackName" xml:space="preserve">
+    <value>Passthru Track Names</value>
+  </data>
+  <data name="VideoColourRange_SameAsSource" xml:space="preserve">
+    <value>Same as source</value>
+  </data>
+  <data name="VideoColourRange_Full" xml:space="preserve">
+    <value>Full</value>
+  </data>
+  <data name="VideoColourRange_Limited" xml:space="preserve">
+    <value>Limited</value>
+  </data>
+  <data name="DarkTheme_Modern" xml:space="preserve">
+    <value>Modern</value>
+  </data>
+  <data name="Options_BeforeUpdating" xml:space="preserve">
+    <value>Before Updating</value>
+  </data>
+  <data name="Options_UpdateNotComplete" xml:space="preserve">
+    <value>The update install was cancelled. </value>
+  </data>
+  <data name="AboutView_ReleaseNotes" xml:space="preserve">
+    <value>Release Notes</value>
+  </data>
+  <data name="Options_ReleaseNotesDesc" xml:space="preserve">
+    <value>You can find out about the latest changes to HandBrake at:</value>
+  </data>
+  <data name="PresetUiType_Menu" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="PresetUiType_Overlay" xml:space="preserve">
+    <value>Overlay</value>
+  </data>
+  <data name="OptionsView_PresetUiType" xml:space="preserve">
+    <value>Display toolbar preset popup as:</value>
+  </data>
+  <data name="QueueViewModel_CancelErrorWillBeCleared" xml:space="preserve">
+    <value>The queue currently has jobs which are in a Cancelled or Errored State. These will be cleared when the queue starts.  
+
+Do you wish to proceed?</value>
+  </data>
+  <data name="QueueView_ExportSelected" xml:space="preserve">
+    <value>Export Queue (Selected)</value>
+  </data>
+  <data name="VideoView_SameAsSource" xml:space="preserve">
+    <value>Same as source</value>
+  </data>
+  <data name="FilterView_Filter" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="FilterView_Preset" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="FilterView_Custom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="AVFilterView_PresetTooltip" xml:space="preserve">
+    <value>Presets for this filter.</value>
+  </data>
+  <data name="AVFilterView_TuneTooltip" xml:space="preserve">
+    <value>Tunes for this filter.</value>
+  </data>
+  <data name="AVFilterView_CustomOptionsTooltip" xml:space="preserve">
+    <value>Custom options for this filter.</value>
+  </data>
+  <data name="Filter_Category_Deinterlace" xml:space="preserve">
+    <value>Deinterlace</value>
+  </data>
+  <data name="Filter_Category_Denoise" xml:space="preserve">
+    <value>Denoise</value>
+  </data>
+  <data name="Filter_Category_Sharpen" xml:space="preserve">
+    <value>Sharpen</value>
+  </data>
+  <data name="Filter_detelecine" xml:space="preserve">
+    <value>Detelecine</value>
+  </data>
+  <data name="Filter_combdetect" xml:space="preserve">
+    <value>Comb Detect</value>
+  </data>
+  <data name="Filter_decomb" xml:space="preserve">
+    <value>Decomb</value>
+  </data>
+  <data name="Filter_yadif" xml:space="preserve">
+    <value>Yadif</value>
+  </data>
+  <data name="Filter_bwdif" xml:space="preserve">
+    <value>Bwdif</value>
+  </data>
+  <data name="Filter_deblock" xml:space="preserve">
+    <value>Deblock</value>
+  </data>
+  <data name="Filter_bm3d" xml:space="preserve">
+    <value>BM3D</value>
+  </data>
+  <data name="Filter_nlmeans" xml:space="preserve">
+    <value>NLMeans</value>
+  </data>
+  <data name="Filter_hqdn3d" xml:space="preserve">
+    <value>HQDN3D</value>
+  </data>
+  <data name="Filter_chromasmooth" xml:space="preserve">
+    <value>Chroma Smooth</value>
+  </data>
+  <data name="Filter_lapsharp" xml:space="preserve">
+    <value>Lapsharp</value>
+  </data>
+  <data name="Filter_unsharp" xml:space="preserve">
+    <value>Unsharp</value>
+  </data>
+  <data name="Filter_grayscale" xml:space="preserve">
+    <value>Grayscale</value>
+  </data>
+  <data name="Filter_colourspace" xml:space="preserve">
+    <value>Colourspace</value>
+  </data>
+  <data name="FiltersView_Tune" xml:space="preserve">
+    <value>Tune</value>
+  </data>
+  <data name="FilterView_AddFilter" xml:space="preserve">
+    <value>Add Filter</value>
+  </data>
+  <data name="Filter_deband" xml:space="preserve">
+    <value>Deband</value>
+  </data>
+  <data name="Filter_agate" xml:space="preserve">
+    <value>Noise Gate</value>
+  </data>
+  <data name="Filter_compressor" xml:space="preserve">
+    <value>Compressor</value>
+  </data>
+  <data name="AudioAdvancedView_Title" xml:space="preserve">
+    <value>Track Settings</value>
   </data>
 </root>

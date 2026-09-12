@@ -11,6 +11,7 @@ namespace HandBrakeWPF.Utilities
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Globalization;
     using System.Management;
     using System.Runtime.InteropServices;
@@ -26,6 +27,7 @@ namespace HandBrakeWPF.Utilities
     public class SystemInfo
     {
         private static List<GpuInfo> gpuInfoCache;
+        private static int coreCount;
         private static readonly object gpuInfoLock = new object();
 
         public static ulong TotalPhysicalMemory
@@ -57,9 +59,42 @@ namespace HandBrakeWPF.Utilities
             get => Environment.ProcessorCount;
         }
 
+        public static int GetCpuPhysicalCoreCount
+        {
+            get
+            {
+                if (coreCount != 0)
+                {
+                    return coreCount;
+                }
+
+                if (IsArmDevice)
+                {
+                    return GetCpuLogicalCount;
+                }
+                
+                try
+                {
+                    using (var searcher = new ManagementObjectSearcher("select NumberOfCores from Win32_Processor"))
+                    {
+                        foreach (ManagementObject item in searcher.Get())
+                        {
+                            coreCount += Convert.ToInt32(item["NumberOfCores"]);
+                        }
+                    }
+                }
+                catch
+                {
+                    coreCount = GetCpuLogicalCount;
+                }
+
+                return coreCount;
+            }
+        }
+
         public static int MaximumSimultaneousInstancesSupported
         {
-            get => Math.Min((int)Math.Round((decimal)SystemInfo.GetCpuLogicalCount / 2, 0), 12);
+            get => Math.Min((int)Math.Round((decimal)SystemInfo.GetCpuPhysicalCoreCount / 2, 0), 12);
         }
 
         public static string ScreenBounds
@@ -137,10 +172,12 @@ namespace HandBrakeWPF.Utilities
                     try
                     {
                        var result = SystemInfo.GetGPUInfo;
+                       var cpuResult = SystemInfo.GetCpuPhysicalCoreCount;
                     }
                     catch (Exception exc)
                     {
                         // Nothing to do. Just don't display the warnings.
+                        Debug.WriteLine(exc);
                     }
                 });
         }

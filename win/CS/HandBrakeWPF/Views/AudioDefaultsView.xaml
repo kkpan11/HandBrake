@@ -8,6 +8,7 @@
              xmlns:helpers="clr-namespace:HandBrakeWPF.Helpers"
              xmlns:Properties="clr-namespace:HandBrakeWPF.Properties"
              xmlns:controls="clr-namespace:HandBrakeWPF.Controls"
+             xmlns:options="clr-namespace:HandBrakeWPF.Converters.Options"
              d:DesignHeight="500"
              d:DesignWidth="800"
              ResizeMode="NoResize"
@@ -26,6 +27,7 @@
         <Audio:AudioRateTypeForDefaultsConverter x:Key="audioRateTypeForDefaultsConverter" />
         <Audio:AudioRateTypeConverter x:Key="audioRateTypeConverter" />
         <Audio:AudioControlVisibilityConverter x:Key="audioControlVisibilityConverter" />
+        <Audio:AudioTrackNamingConverter x:Key="audioTrackNamingConverter" />
     </Window.Resources>
 
 
@@ -95,7 +97,7 @@
                         <TextBlock Text="{x:Static Properties:Resources.Shared_AvailableLanguages}" Margin="0,0,0,5"/>
                         <ListBox Name="availableLanguages" ItemsSource="{Binding AvailableLanguages}" DisplayMemberPath="DisplayNative"
                                      helpers:ListBoxHelper.SelectedItems="{Binding SelectedAvailableToMove}" 
-                                             SelectionMode="Extended" Width="225" Height="120" />
+                                             SelectionMode="Extended" Width="225" Height="150" />
                     </StackPanel>
 
                     <DockPanel Grid.Column="1" Margin="10,0,10,0">
@@ -110,7 +112,7 @@
                         <TextBlock Text="{x:Static Properties:Resources.Shared_ChosenLanguages}"  Margin="0,0,0,5"/>
                         <ListBox Name="selectedLanguages" ItemsSource="{Binding AudioBehaviours.SelectedLanguages}"  DisplayMemberPath="DisplayNative"
                                      helpers:ListBoxHelper.SelectedItems="{Binding SelectedLanguagesToMove}" 
-                                             SelectionMode="Extended" Width="225" Height="120"
+                                             SelectionMode="Extended" Width="225" Height="150"
                                              dd:DragDrop.DropHandler="{Binding}"
                                              dd:DragDrop.IsDragSource="True"
                                              dd:DragDrop.IsDropTarget="True"/>
@@ -132,7 +134,7 @@
             <ItemsControl x:Name="StreamsItemsControl" ItemsSource="{Binding PassthruEncoders}" Margin="10,5,0,0" HorizontalAlignment="Left">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Rows="6" Columns="2" IsItemsHost="true" />
+                        <UniformGrid Rows="7" Columns="2" IsItemsHost="true" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
@@ -158,8 +160,21 @@
                         </MultiBinding>
                     </ComboBox.ItemsSource>
                 </ComboBox>
+            </StackPanel>
+
+            <StackPanel Orientation="Vertical">
+
+                <TextBlock Text="{x:Static Properties:Resources.AudioDefaultsView_NamingBehaviour}" Style="{StaticResource subHeader}" Margin="0,10,0,5" />
+
+                <CheckBox Content="{x:Static Properties:Resources.AudioDefaultsView_PassthruTrackNames}" IsChecked="{Binding AudioBehaviours.AudioTrackNamePassthru}" Margin="10,0,0,0" /> 
+                <StackPanel Orientation="Horizontal" Margin="10,5,0,0">
+                    <TextBlock Text="{x:Static Properties:Resources.AudioDefaultsView_AutoNaming}" />
+                    <ComboBox ItemsSource="{Binding TrackNamingBehaviours, Converter={StaticResource audioTrackNamingConverter}}" SelectedItem="{Binding AudioBehaviours.AudioAutomaticNamingBehavior, Converter={StaticResource audioTrackNamingConverter}}"
+                              Margin="5,0,0,0"/>
+                </StackPanel>
 
             </StackPanel>
+
         </StackPanel>
 
         <!-- Tracks -->
@@ -231,6 +246,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
@@ -347,7 +363,13 @@
                                         </MultiBinding>
                                     </controls:NumberBox.Visibility>
                                 </controls:NumberBox>
+
+                                <Button Content="..." Grid.Column="14" Grid.Row="0" Margin="5,0,0,0"
+                                        Command="{Binding DataContext.ShowAudioAdvancedSettingsCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}"          
+                                        CommandParameter="{Binding}" />
                             </Grid>
+
+
 
                             <!--  Delete  -->
                             <StackPanel Grid.Column="2" Grid.Row="0" VerticalAlignment="Center">

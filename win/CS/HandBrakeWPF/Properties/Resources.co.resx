@@ -59,46 +59,46 @@
             : using a System.ComponentModel.TypeConverter
             : and then encoded with base64 encoding.
     -->
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+  <xsd:schema xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" id="root">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
           <xsd:element name="metadata">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
               </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+              <xsd:attribute name="type" type="xsd:string"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+              <xsd:attribute ref="xml:space"/>
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="assembly">
             <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string" />
-              <xsd:attribute name="name" type="xsd:string" />
+              <xsd:attribute name="alias" type="xsd:string"/>
+              <xsd:attribute name="name" type="xsd:string"/>
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="data">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1"/>
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3"/>
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4"/>
+              <xsd:attribute ref="xml:space"/>
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="resheader">
             <xsd:complexType>
               <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="name" type="xsd:string" use="required"/>
             </xsd:complexType>
           </xsd:element>
         </xsd:choice>
@@ -438,7 +438,7 @@ U ghjurnale d’attività puderia cuntene infurmazioni addiziunale.</value>
     <value>Un sbagliu scunnisciutu hè accadutu.</value>
   </data>
   <data name="OptionsViewModel_NewUpdate" xml:space="preserve">
-    <value>Un rinnovu recente hè dispunibule ! Ci vole à cunsultà u situ web per fighjà e note di versione.</value>
+    <value>HandBrake {0} hè dispunibule avà. Ci vole à cunsultà u situ web per fighjà e note di versione.</value>
   </data>
   <data name="OptionsViewModel_NoNewUpdates" xml:space="preserve">
     <value>À st’ora, ùn ci hè alcunu rinnovu recente.</value>
@@ -1030,7 +1030,7 @@ Indiziu : Ciò ch’ella ci vole à fà in casu di rimpiazzamentu di schedariu p
     <value>Fighjulata</value>
   </data>
   <data name="MainView_ProgressStatusWithTask" xml:space="preserve">
-    <value>Cudificazione : {0}, {1:00.00}%, Tempu rimanente : {2}, {3}</value>
+    <value>{0}, {1:00.00}%, Tempu rimanente : {2}</value>
   </data>
   <data name="MainView_Range" xml:space="preserve">
     <value>Intervallu :</value>
@@ -1636,6 +1636,9 @@ VLC è MPC-HC sò accettati. D’altri lettori ponu dinù funziunà ma ùn sò m
   <data name="VideoView_Codec" xml:space="preserve">
     <value>Cudificatore video :</value>
   </data>
+  <data name="VideoView_ColourRange" xml:space="preserve">
+    <value>Gamma di culore :</value>
+  </data>
   <data name="VideoView_ConstantFramerate" xml:space="preserve">
     <value>Frequenza di fiure custente</value>
   </data>
@@ -2126,7 +2129,7 @@ Induve hè accettatu, tutte e prerigature persunalizate seranu state impurtate.<
     <value>Una nova versione hè dispunibule !</value>
   </data>
   <data name="About_Copyright" xml:space="preserve">
-    <value>Diritti di copia (C) 2003-2024 The HandBrake Team</value>
+    <value>Diritti d’autore (C) 2003-2026 The HandBrake Team</value>
   </data>
   <data name="Options_LowBatteryLevel" xml:space="preserve">
     <value>Livellu di batteria debule :</value>
@@ -2194,16 +2197,16 @@ Ci vole à sceglie una prerigatura sfarente.</value>
     <value>Persunalizatu (Micca ristrintu)</value>
   </data>
   <data name="PaddingMode_Fill" xml:space="preserve">
-    <value>Riempie (Surround)</value>
+    <value>Larghezza è altezza</value>
   </data>
   <data name="PaddingMode_Height" xml:space="preserve">
-    <value>Altezza (Pillarbox)</value>
+    <value>Altezza (Letterbox)</value>
   </data>
   <data name="PaddingMode_None" xml:space="preserve">
     <value>Nisunu</value>
   </data>
   <data name="PaddingMode_Width" xml:space="preserve">
-    <value>Larghezza (Letterbox)</value>
+    <value>Larghezza (Pillarbox)</value>
   </data>
   <data name="PictureSettingsView_Padding" xml:space="preserve">
     <value>Riempiimentu :</value>
@@ -2259,9 +2262,6 @@ Ci vole à sceglie una prerigatura sfarente.</value>
   <data name="PictureSettingsResLimitModes_none" xml:space="preserve">
     <value>Nisunu</value>
   </data>
-  <data name="PresetManger_Title" xml:space="preserve">
-    <value>Ghjestione di e prerigature</value>
-  </data>
   <data name="ManagePresetView_DeleteBuiltIn" xml:space="preserve">
     <value>Squassà e prerigature integrate</value>
   </data>
@@ -2290,7 +2290,7 @@ Ci vole à sceglie una prerigatura sfarente.</value>
     <value>Piantà</value>
   </data>
   <data name="String1" xml:space="preserve">
-    <value />
+    <value/>
   </data>
   <data name="PresetService_CategoryAlreadyExists" xml:space="preserve">
     <value>U nome di categuria scrittu esiste dighjà. Ci vole à sceglie un nome sfarente.</value>
@@ -2448,9 +2448,8 @@ Pudete cambià a vostra scelta à ogni mumentu cambiendu l’ozzioni in Preferen
     <value>Circà e nove versioni ?</value>
   </data>
   <data name="OptionsViewModel_UpdateNotice" xml:space="preserve">
-    <value>Nanzu di rinnovà :
-- Assicuratevi ch’ella ùn ci hè micca di cudificazione in a fila d’attesa
-- Arregistrate o pigliate nota di tutta prerigatura persunalizata chì voi averiate creata perchè si puderia qu’ella ùn fussi micca accettata da e nove versioni</value>
+    <value>- Assicuratevi ch’ella ùn ci sia micca cudificazione in attesa in a fila d’attesa.
+- Arregistrate o pigliate nota di tutta prerigatura persunalizata chì voi averiate creata perchè si puderia qu’ella ùn fussi micca accettata da e nove versioni.</value>
   </data>
   <data name="Preset_Default" xml:space="preserve">
     <value>(Predefinitu)</value>
@@ -2832,7 +2831,7 @@ Per permette parechje cudificazioni simultanee, attivate st’ozzione in u listi
     <value>Principià dopu</value>
   </data>
   <data name="QueueView_QueueStartTime" xml:space="preserve">
-    <value>Ora di principiu :</value>
+    <value>A fila d’attesa principierà autumaticamente à :</value>
   </data>
   <data name="QueueView_EncodeShutdown" xml:space="preserve">
     <value>Interruzzione di a cudificazione…</value>
@@ -2859,16 +2858,16 @@ Per permette parechje cudificazioni simultanee, attivate st’ozzione in u listi
     <value>Apre a finestra di l’attività</value>
   </data>
   <data name="OptionsView_EnableNvencEncoding" xml:space="preserve">
-    <value />
+    <value/>
   </data>
   <data name="OptionsView_EnableQuicksyncEncoding" xml:space="preserve">
-    <value />
+    <value/>
   </data>
   <data name="OptionsView_EnableVceEncoding" xml:space="preserve">
-    <value />
+    <value/>
   </data>
   <data name="OptionsView_ChoiceOfEncoderHint" xml:space="preserve">
-    <value />
+    <value/>
   </data>
   <data name="AnamorphicMode_Custom" xml:space="preserve">
     <value>Persunalizata</value>
@@ -2919,22 +2918,122 @@ Per permette parechje cudificazioni simultanee, attivate st’ozzione in u listi
     <value>Fiure</value>
   </data>
   <data name="Options_RangeModeSelection" xml:space="preserve">
-    <value>Default Range Mode for Titles:</value>
+    <value>Modu predefinitu di seria per i tituli :</value>
   </data>
   <data name="WhenDone_CustomAction" xml:space="preserve">
-    <value>Custom Action</value>
+    <value>Azzione persunalizata</value>
   </data>
   <data name="OptionsView_CustomActionConfig" xml:space="preserve">
-    <value>'Custom Action' Configuration:</value>
+    <value>Cunfigurazione di l’« Azzione persunalizata » :</value>
   </data>
   <data name="MainView_OpenAutonamePreferences" xml:space="preserve">
-    <value>Open Autoname Preferences</value>
+    <value>Apre e preferenze di nome autumaticu</value>
   </data>
   <data name="Options_RunAction" xml:space="preserve">
-    <value>Run Script / Executable: </value>
+    <value>Lancià un scenariu o un prugramma :</value>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="OptionsViewModel_PortableMode" type="System.Resources.ResXNullRef, System.Windows.Forms">
-    <value />
+  <data name="OptionsViewModel_PortableMode" xml:space="preserve">
+    <value>HandBrake hè cunfiguratu attualmente in modu purtavule. Per mudificà un’installazione purtavule, ci vole à scaricà l’ultima versione da u situ web.</value>
+  </data>
+  <data name="MetaData_Add" xml:space="preserve">
+    <value>Aghjunghje una linea</value>
+  </data>
+  <data name="MainView_DebugMenu" xml:space="preserve">
+    <value>Listinu di spannatura</value>
+  </data>
+  <data name="MainView_DebugExportData" xml:space="preserve">
+    <value>Espurtà un schedariu di spannatura (JSON)</value>
+  </data>
+  <data name="MainView_DebugImportData" xml:space="preserve">
+    <value>Impurtà un schedariu di spannatura (JSON)</value>
+  </data>
+  <data name="MainView_DebugQualitySweep" xml:space="preserve">
+    <value>Aghjunghje à a fila d’attesa - Spazzera di qualità</value>
+  </data>
+  <data name="LogView_ChooseLogFile" xml:space="preserve">
+    <value>Sceglie u schedariu di ghjurnale :</value>
+  </data>
+  <data name="LogView_AutoScrolling" xml:space="preserve">
+    <value>Sfilarata automatica</value>
+  </data>
+  <data name="LogLevel_Minimised" xml:space="preserve">
+    <value>Minimale</value>
+  </data>
+  <data name="LogLevel_Standard" xml:space="preserve">
+    <value>Classicu</value>
+  </data>
+  <data name="LogLevel_Extended" xml:space="preserve">
+    <value>Estesu</value>
+  </data>
+  <data name="QueueView_CancelDelayStart" xml:space="preserve">
+    <value>Abbandunà u cumportu</value>
+  </data>
+  <data name="QueueView_StartQueueNow" xml:space="preserve">
+    <value>Lancià a fila d’attesa (subitu)</value>
+  </data>
+  <data name="AudioTrackNaming_None" xml:space="preserve">
+    <value>Nisuna</value>
+  </data>
+  <data name="AudioTrackNaming_Unnamed" xml:space="preserve">
+    <value>Solu e senza nome</value>
+  </data>
+  <data name="AudioTrackNaming_All" xml:space="preserve">
+    <value>Tutte e traccie</value>
+  </data>
+  <data name="AudioDefaultsView_NamingBehaviour" xml:space="preserve">
+    <value>Cumpurtamentu di a dinuminazione di traccia :</value>
+  </data>
+  <data name="AudioDefaultsView_AutoNaming" xml:space="preserve">
+    <value>Dinuminazione autumatica :</value>
+  </data>
+  <data name="AudioDefaultsView_PassthruTrackNames" xml:space="preserve">
+    <value>Nome di a traccia di passeghju</value>
+  </data>
+  <data name="SubtitlesDefaultsView_PassthruTrackName" xml:space="preserve">
+    <value>Nome di a traccia di passeghju</value>
+  </data>
+  <data name="VideoColourRange_SameAsSource" xml:space="preserve">
+    <value>Listessa chì a fonte</value>
+  </data>
+  <data name="VideoColourRange_Full" xml:space="preserve">
+    <value>Cumpletu</value>
+  </data>
+  <data name="VideoColourRange_Limited" xml:space="preserve">
+    <value>Limitatu</value>
+  </data>
+  <data name="DarkTheme_Modern" xml:space="preserve">
+    <value>Mudernu</value>
+  </data>
+  <data name="Options_BeforeUpdating" xml:space="preserve">
+    <value>Nanzu di mette à livellu</value>
+  </data>
+  <data name="Options_UpdateNotComplete" xml:space="preserve">
+    <value>L’installazione di a messa à livellu hè stata abbandunata.</value>
+  </data>
+  <data name="AboutView_ReleaseNotes" xml:space="preserve">
+    <value>Annutazioni di versione</value>
+  </data>
+  <data name="Options_ReleaseNotesDesc" xml:space="preserve">
+    <value>Si pò infurmassi apprupositu di l’ultimi cambiamenti d’HandBrake nant’à :</value>
+  </data>
+  <data name="PresetUiType_Menu" xml:space="preserve">
+    <value>Listinu</value>
+  </data>
+  <data name="PresetUiType_Overlay" xml:space="preserve">
+    <value>Accavalcatura</value>
+  </data>
+  <data name="OptionsView_PresetUiType" xml:space="preserve">
+    <value>Affissà u finestrinu di barra d’attrezzi di prerigatura cum’è :</value>
+  </data>
+  <data name="QueueViewModel_CancelErrorWillBeCleared" xml:space="preserve">
+    <value>Attualmente a fila d’attesa cuntene travagli chì sò in i stati Abbandunatu o Sbagliatu. Seranu squassati quandu a fila d’attesa principeghja.
+
+Vulete cuntinuà ?</value>
+  </data>
+  <data name="QueueView_ExportSelected" xml:space="preserve">
+    <value>Espurtà a fila d’attesa (selezziunata)</value>
+  </data>
+  <data name="VideoView_SameAsSource" xml:space="preserve">
+    <value>Listessa chì a fonte</value>
   </data>
 </root>

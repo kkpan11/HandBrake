@@ -1,6 +1,6 @@
 /* cropscale.c
 
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -29,6 +29,7 @@ hb_filter_object_t hb_filter_crop_scale =
     .enforce_order     = 1,
     .skip              = 1,
     .name              = "Crop and Scale",
+    .short_name        = "cropscale",
     .settings          = NULL,
     .init              = crop_scale_init,
     .work              = hb_avfilter_null_work,
@@ -109,21 +110,15 @@ static int crop_scale_init(hb_filter_object_t * filter, hb_filter_init_t * init)
 
         hb_dict_set_int(avsettings, "w", width);
         hb_dict_set_int(avsettings, "h", height);
-        hb_dict_set_int(avsettings, "async_depth", init->job->qsv.async_depth);
-        int hw_generation = hb_qsv_hardware_generation(hb_qsv_get_platform(hb_qsv_get_adapter_index()));
-        if (init->job->qsv.ctx->vpp_scale_mode)
+        hb_dict_set_int(avsettings, "async_depth", init->job->hw_device_async_depth);
+        if (init->job->qsv_ctx->vpp_scale_mode)
         {
-            hb_dict_set_string(avsettings, "scale_mode", init->job->qsv.ctx->vpp_scale_mode);
-            hb_log("qsv: scaling filter mode %s", init->job->qsv.ctx->vpp_scale_mode);
+            hb_dict_set_string(avsettings, "scale_mode", init->job->qsv_ctx->vpp_scale_mode);
+            hb_log("qsv: scaling filter mode %s", init->job->qsv_ctx->vpp_scale_mode);
         }
-        else if (hw_generation >= QSV_G8)
+        else
         {
-            hb_dict_set_string(avsettings, "scale_mode", "compute");
-            hb_log("qsv: scaling filter mode %s", "compute");
-        }
-        if (init->job->qsv.ctx->vpp_interpolation_method)
-        {
-            hb_dict_set_string(avsettings, "method", init->job->qsv.ctx->vpp_interpolation_method);
+            hb_dict_set_string(avsettings, "scale_mode", "hq");
         }
         hb_dict_set(avfilter, "vpp_qsv", avsettings);
     }
@@ -137,6 +132,20 @@ static int crop_scale_init(hb_filter_object_t * filter, hb_filter_init_t * init)
             hb_dict_set_string(avsettings, "interp_algo", "lanczos");
             hb_dict_set_string(avsettings, "format", av_get_pix_fmt_name(init->pix_fmt));
             hb_dict_set(avfilter, "scale_cuda", avsettings);
+        }
+        else if (init->hw_pix_fmt == AV_PIX_FMT_D3D11)
+        {
+            hb_dict_set_int(avsettings, "width", width);
+            hb_dict_set_int(avsettings, "height", height);
+            hb_dict_set(avfilter, "scale_d3d11", avsettings);
+        }
+        else if (init->hw_pix_fmt == AV_PIX_FMT_AMF_SURFACE)
+        {
+            hb_dict_set_int(avsettings, "w", width);
+            hb_dict_set_int(avsettings, "h", height);
+            hb_dict_set_string(avsettings, "scale_type", "bilinear");
+            hb_dict_set_string(avsettings, "format", av_get_pix_fmt_name(init->pix_fmt));
+            hb_dict_set(avfilter, "vpp_amf", avsettings);
         }
         else if (hb_av_can_use_zscale(init->pix_fmt,
                                       init->geometry.width, init->geometry.height,

@@ -9,19 +9,16 @@
 
 namespace HandBrakeWPF.ViewModels
 {
-    using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Linq;
-    using System.Runtime.CompilerServices;
 
     using HandBrake.App.Core.Utilities;
     using HandBrake.Interop.Interop;
     using HandBrake.Interop.Interop.Interfaces.Model;
     using HandBrake.Interop.Interop.Interfaces.Model.Encoders;
-    using HandBrake.Interop.Utilities;
 
     using HandBrakeWPF.Commands;
     using HandBrakeWPF.Model.Audio;
@@ -43,15 +40,15 @@ namespace HandBrakeWPF.ViewModels
     {
         private readonly IWindowManager windowManager;
 
+        private readonly IAudioAdvancedViewModel audioAdvancedViewModel;
+
         private BindingList<Language> availableLanguages;
         private AudioBehaviours audioBehaviours;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AudioDefaultsViewModel"/> class.
-        /// </summary>
-        public AudioDefaultsViewModel(IWindowManager windowManager)
+        public AudioDefaultsViewModel(IWindowManager windowManager, IAudioAdvancedViewModel audioAdvancedViewModel)
         {
             this.windowManager = windowManager;
+            this.audioAdvancedViewModel = audioAdvancedViewModel;
             this.AudioBehaviours = new AudioBehaviours();
             this.SelectedAvailableToMove = new BindingList<Language>();
             this.SelectedLanguagesToMove = new BindingList<Language>();
@@ -75,7 +72,10 @@ namespace HandBrakeWPF.ViewModels
             this.PassthruEncoders = data;
 
             this.RemoveTrackCommand = new SimpleRelayCommand<AudioBehaviourTrack>(this.RemoveTrack, null);
+            this.ShowAudioAdvancedSettingsCommand = new SimpleRelayCommand<AudioBehaviourTrack>(this.ShowAudioAdvancedSettings);
         }
+
+        public SimpleRelayCommand<AudioBehaviourTrack> ShowAudioAdvancedSettingsCommand { get; set; }
 
         #region Properties
 
@@ -216,6 +216,15 @@ namespace HandBrakeWPF.ViewModels
         /// </summary>
         public IList<string> SampleRates { get; set; }
 
+        public IList<AudioTrackNamingBehaviour> TrackNamingBehaviours
+        {
+            get
+            {
+                return new BindingList<AudioTrackNamingBehaviour>(EnumHelper<AudioTrackNamingBehaviour>.GetEnumList().ToList());
+            }
+        }
+
+
         #endregion
 
         #region Public Methods
@@ -295,6 +304,12 @@ namespace HandBrakeWPF.ViewModels
             this.UpdateAvailableLanguages();
         }
 
+        public void ShowAudioAdvancedSettings(AudioBehaviourTrack track)
+        {
+            this.audioAdvancedViewModel.UpdateTask(track);
+            this.audioAdvancedViewModel.ShowDialog();
+        }
+
         #endregion
 
         #region Methods
@@ -342,6 +357,9 @@ namespace HandBrakeWPF.ViewModels
                 }
 
                 this.UpdateAvailableLanguages();
+
+                this.AudioBehaviours.AudioTrackNamePassthru = behaviours.AudioTrackNamePassthru;
+                this.AudioBehaviours.AudioAutomaticNamingBehavior = behaviours.AudioAutomaticNamingBehavior;
             }
 
             this.CorrectAudioEncoders(this.OutputFormat);
@@ -397,6 +415,11 @@ namespace HandBrakeWPF.ViewModels
                 this.AudioEncoderFallback = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.AvAac);
             }
 
+            if (outputFormat == OutputFormat.Mov && this.AudioEncoderFallback != null && !this.AudioEncoderFallback.SupportsMOV)
+            {
+                this.AudioEncoderFallback = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.AvAac);
+            }
+
             if (outputFormat == OutputFormat.WebM && this.AudioEncoderFallback != null && !this.AudioEncoderFallback.SupportsWebM)
             {
                 this.AudioEncoderFallback = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.Vorbis);
@@ -405,6 +428,14 @@ namespace HandBrakeWPF.ViewModels
             if (outputFormat == OutputFormat.Mp4)
             {
                 foreach (AudioBehaviourTrack track in this.BehaviourTracks.Where(track => !track.Encoder.SupportsMP4))
+                {
+                    track.Encoder = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.AvAac);
+                }
+            }
+
+            if (outputFormat == OutputFormat.Mov)
+            {
+                foreach (AudioBehaviourTrack track in this.BehaviourTracks.Where(track => !track.Encoder.SupportsMOV))
                 {
                     track.Encoder = HandBrakeEncoderHelpers.GetAudioEncoder(HBAudioEncoder.AvAac);
                 }

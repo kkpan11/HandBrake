@@ -1,7 +1,7 @@
 /* unsharp_vt.m
 
    Copyright (c) 2002 Rémi Guyomarch <rguyom at pobox.com>
-   Copyright (c) 2003-2025 HandBrake Team
+   Copyright (c) 2003-2026 HandBrake Team
    This file is part of the HandBrake source code
    Homepage: <http://handbrake.fr/>.
    It may be used under the terms of the GNU General Public License v2.
@@ -71,6 +71,7 @@ hb_filter_object_t hb_filter_chroma_smooth_vt =
     .id                = HB_FILTER_CHROMA_SMOOTH_VT,
     .enforce_order     = 1,
     .name              = "Chroma Smooth (VideoToolbox)",
+    .short_name        = "chromasmooth_vt",
     .settings          = NULL,
     .init              = chroma_smooth_vt_init,
     .work              = chroma_smooth_vt_work,

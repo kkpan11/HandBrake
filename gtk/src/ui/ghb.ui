@@ -204,7 +204,7 @@ conjunction with the &quot;Forced&quot; option.</property>
   <object class="GtkWindow" id="queue_window">
     <property name="title" translatable="yes">HandBrake Queue</property>
     <property name="icon-name">fr.handbrake.ghb</property>
-    <signal name="close-request" handler="queue_window_delete_cb" swapped="no"/>
+    <property name="hide-on-close">1</property>
     <child type="titlebar">
       <object class="GtkHeaderBar">
         <child>
@@ -1300,8 +1300,8 @@ Resets the queue job to pending and ready to run again.</property>
     <property name="title" translatable="yes">About HandBrake</property>
     <property name="modal">1</property>
     <property name="program-name">HandBrake</property>
-    <property name="copyright" translatable="yes">Copyright © 2008-2024 John Stebbins
-Copyright © 2004-2024, HandBrake Devs</property>
+    <property name="copyright" translatable="yes">Copyright © 2008-2026 John Stebbins
+Copyright © 2004-2026, HandBrake Devs</property>
     <property name="comments" translatable="yes">Multithreaded video transcoder</property>
     <property name="website">https://handbrake.fr</property>
     <property name="website-label">https://handbrake.fr</property>
@@ -1637,6 +1637,24 @@ This is often the feature title of a DVD.</property>
                         <signal name="input" handler="ptop_read_value_cb" swapped="no"/>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkLabel" id="duration_label">
+                        <property name="halign">end</property>
+                        <property name="valign">center</property>
+                        <property name="use-markup">1</property>
+                        <property name="margin-start">6</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Duration:&lt;/b&gt;</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="title_duration_inline">
+                        <property name="halign">start</property>
+                        <property name="valign">center</property>
+                        <property name="margin-start">6</property>
+                        <property name="width-chars">8</property>
+                        <property name="label" translatable="yes">hh:mm:ss</property>
+                      </object>
+                    </child>
                     <layout>
                       <property name="row">1</property>
                       <property name="column">1</property>
@@ -1841,35 +1859,6 @@ sync for broken players that do not honor MP4 edit lists.</property>
                                 <property name="row-spacing">2</property>
                                 <property name="column-spacing">6</property>
                                 <child>
-                                  <object class="GtkLabel" id="label6">
-                                    <property name="xalign">0</property>
-                                    <property name="yalign">0</property>
-                                    <property name="halign">start</property>
-                                    <property name="use-markup">1</property>
-                                    <property name="margin-top">12</property>
-                                    <property name="label" translatable="yes">Duration:</property>
-                                    <layout>
-                                      <property name="row">5</property>
-                                      <property name="column">0</property>
-                                    </layout>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkLabel" id="title_duration">
-                                    <property name="halign">start</property>
-                                    <property name="xalign">0</property>
-                                    <property name="yalign">0</property>
-                                    <property name="hexpand">0</property>
-                                    <property name="label" translatable="yes">hh:mm:ss</property>
-                                    <property name="margin-top">12</property>
-                                    <property name="width-chars">8</property>
-                                    <layout>
-                                      <property name="row">5</property>
-                                      <property name="column">1</property>
-                                    </layout>
-                                  </object>
-                                </child>
-                                <child>
                                   <object class="GtkLabel" id="tracks_summary_label">
                                     <property name="label" translatable="yes">Tracks:</property>
                                     <property name="xalign">0</property>
@@ -1994,17 +1983,71 @@ sync for broken players that do not honor MP4 edit lists.</property>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkPicture" id="summary_preview_image">
-                            <property name="visible">0</property>
-                            <property name="margin-bottom">4</property>
-                            <property name="margin-start">4</property>
-                            <property name="margin-end">4</property>
-                            <property name="hexpand">1</property>
-                            <property name="vexpand">1</property>
-                            <property name="keep-aspect-ratio">True</property>
-                            <accessibility>
-                              <property name="label" translatable="yes">Video Preview</property>
-                            </accessibility>
+                          <object class="GtkOverlay">
+                            <property name="visible">false</property>
+                            <property name="halign">center</property>
+                            <property name="valign">center</property>
+                            <child>
+                              <object class="GtkPicture" id="summary_preview_image">
+                                <property name="margin-bottom">4</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="hexpand">1</property>
+                                <property name="vexpand">1</property>
+                                <property name="halign">center</property>
+                                <property name="valign">center</property>
+                                <property name="keep-aspect-ratio">True</property>
+                                <child>
+                                  <object class="GtkEventControllerMotion">
+                                    <signal name="leave" handler="preview_leave_cb" object="summary_preview_hud" swapped="no"/>
+                                    <signal name="motion" handler="preview_motion_cb" object="summary_preview_hud" swapped="no"/>
+                                  </object>
+                                </child>
+                                <accessibility>
+                                  <property name="label" translatable="yes">Video Preview</property>
+                                </accessibility>
+                              </object>
+                            </child>
+                            <child type="overlay">
+                              <object class="GtkBox" id="summary_preview_hud">
+                                <property name="can-focus">False</property>
+                                <property name="halign">center</property>
+                                <property name="visible">False</property>
+                                <property name="opacity">0.0</property>
+                                <property name="valign">end</property>
+                                <property name="margin-bottom">30</property>
+                                <property name="css-classes">ghb-preview-hud
+osd
+app-notification</property>
+                                <child>
+                                  <object class="GtkEventControllerMotion">
+                                    <signal name="enter" handler="hud_enter_cb" swapped="no"/>
+                                    <signal name="leave" handler="hud_leave_cb" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton" id="summary_preview_last">
+                                    <property name="icon-name">pan-start-symbolic</property>
+                                    <property name="css-classes">flat</property>
+                                    <signal name="clicked" handler="preview_last_cb" object="preview_frame" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="summary_preview_count">
+                                    <property name="label">1/1</property>
+                                    <property name="width-chars">5</property>
+                                    <property name="css-classes">numeric</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkButton" id="summary_preview_next">
+                                    <property name="icon-name">pan-end-symbolic</property>
+                                    <property name="css-classes">flat</property>
+                                    <signal name="clicked" handler="preview_next_cb" object="preview_frame" swapped="no"/>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
                             <layout>
                               <property name="row">0</property>
                               <property name="column">1</property>
@@ -3410,6 +3453,28 @@ a variable framerate, &apos;Same as source&apos; will preserve it.</property>
                                     </layout>
                                   </object>
                                 </child>
+                                <child>
+                                  <object class="GtkLabel" id="VideoColorRangeLabel">
+                                    <property name="halign">start</property>
+                                    <property name="label" translatable="yes">Color Range:</property>
+                                    <layout>
+                                      <property name="row">3</property>
+                                      <property name="column">0</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkComboBox" id="VideoColorRange">
+                                    <property name="valign">center</property>
+                                    <property name="width-request">100</property>
+                                    <property name="tooltip-text" translatable="yes">Color Range. Determines the values of the reference black and white. Set to limited to maximize compatibility.</property>
+                                    <signal name="changed" handler="color_range_changed_cb" swapped="no"/>
+                                    <layout>
+                                      <property name="row">3</property>
+                                      <property name="column">1</property>
+                                    </layout>
+                                  </object>
+                                </child>
                               </object>
                             </child>
                             <child>
@@ -4572,7 +4637,7 @@ Overrides all other settings.</property>
     <property name="transient-for">hb_window</property>
     <property name="modal">1</property>
     <property name="use-header-bar">1</property>
-    <signal name="close-request" handler="gtk_widget_hide" swapped="no"/>
+    <property name="hide-on-close">1</property>
     <child>
       <object class="GtkBox" id="subtitle_selection_tab">
         <property name="orientation">vertical</property>
@@ -4768,6 +4833,15 @@ Overrides all other settings.</property>
           </object>
         </child>
         <child>
+          <object class="GtkCheckButton" id="SubtitleTrackNamePassthru">
+            <property name="label" translatable="1">Passthru track names</property>
+            <property name="focusable">1</property>
+            <property name="tooltip-text" translatable="1">Preserve the source track names</property>
+            <property name="halign">start</property>
+            <signal name="toggled" handler="subtitle_def_widget_changed_cb" swapped="no"/>
+          </object>
+        </child>
+        <child>
           <object class="GtkBox" id="subtitle_burn_box">
             <property name="spacing">4</property>
             <child>
@@ -4842,7 +4916,7 @@ Overrides all other settings.</property>
     <property name="modal">1</property>
     <property name="use-header-bar">1</property>
     <property name="height-request">540</property>
-    <signal name="close-request" handler="gtk_widget_hide" swapped="no"/>
+    <property name="hide-on-close">1</property>
     <property name="child">
       <object class="GtkBox">
         <property name="orientation">vertical</property>
@@ -5186,6 +5260,21 @@ This permits Opus passthru to be selected when automatic passthru selection is e
                         </layout>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkCheckButton" id="AudioAllowPCMPass">
+                        <property name="label" translatable="yes">PCM</property>
+                        <property name="focusable">1</property>
+                        <property name="tooltip-text" translatable="yes">Enable this if your playback device supports PCM.
+This permits PCM passthru to be selected when automatic passthru selection is enabled.</property>
+                        <property name="halign">start</property>
+                        <property name="active">1</property>
+                        <signal name="toggled" handler="audio_passthru_widget_changed_cb" swapped="no"/>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">6</property>
+                        </layout>
+                      </object>
+                    </child>
                   </object>
                 </child>
                 <child>
@@ -5204,6 +5293,36 @@ This permits Opus passthru to be selected when automatic passthru selection is e
                         <property name="valign">center</property>
                         <property name="tooltip-text" translatable="yes">Set the audio codec to encode with when a suitable track can not be found for audio passthru.</property>
                         <signal name="changed" handler="audio_fallback_widget_changed_cb" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="AudioTrackNamePassthru">
+                    <property name="label" translatable="yes">Passthru track names</property>
+                    <property name="focusable">1</property>
+                    <property name="tooltip-text" translatable="yes">Preserve the source track names.</property>
+                    <property name="halign">start</property>
+                    <property name="active">1</property>
+                    <signal name="toggled" handler="audio_def_widget_changed_cb" swapped="no"/>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox" id="auto_autonaming_box">
+                    <property name="spacing">6</property>
+                    <property name="halign">end</property>
+                    <child>
+                      <object class="GtkLabel" id="labela5">
+                        <property name="halign">end</property>
+                        <property name="hexpand">1</property>
+                        <property name="label" translatable="yes">Autonaming:</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkComboBox" id="AudioAutomaticNamingBehavior">
+                        <property name="valign">center</property>
+                        <property name="tooltip-text" translatable="yes">Set the automatic naming behaviour.</property>
+                        <signal name="changed" handler="audio_autonaming_widget_changed_cb" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -5811,7 +5930,27 @@ battery is charged.</property>
                         <property name="margin-start">12</property>
                         <child>
                           <object class="GtkGrid" id="AdvancedPrefsTable">
-                            <property name="row-spacing">2</property>
+                            <property name="row-spacing">2</property><child>
+                              <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">6</property>
+                                <property name="tooltip-text" translatable="yes">Select the language to use for the HandBrake user interface.</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Display Language:</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkComboBox" id="UiLanguage">
+                                    <signal name="changed" handler="ui_language_changed_cb" swapped="no"/>
+                                  </object>
+                                </child>
+                                <layout>
+                                  <property name="row">0</property>
+                                  <property name="column">0</property>
+                                </layout>
+                              </object>
+                            </child>
                             <child>
                               <object class="GtkBox" id="CustomTmpBox">
                                 <property name="orientation">vertical</property>
@@ -5847,10 +5986,11 @@ battery is charged.</property>
                                     <property name="hexpand">True</property>
                                     <property name="title" translatable="yes">Temp Directory</property>
                                     <property name="margin-start">21</property>
+                                    <signal name="notify::file" handler="temp_dir_changed_cb" swapped="no"/>
                                   </object>
                                 </child>
                                 <layout>
-                                  <property name="row">0</property>
+                                  <property name="row">1</property>
                                   <property name="column">0</property>
                                 </layout>
                               </object>
@@ -5873,7 +6013,7 @@ battery is charged.</property>
                                   </object>
                                 </child>
                                 <layout>
-                                  <property name="row">1</property>
+                                  <property name="row">2</property>
                                   <property name="column">0</property>
                                 </layout>
                               </object>
@@ -5885,7 +6025,7 @@ battery is charged.</property>
                                 <property name="halign">start</property>
                                 <signal name="toggled" handler="pref_changed_cb" swapped="no"/>
                                 <layout>
-                                  <property name="row">2</property>
+                                  <property name="row">3</property>
                                   <property name="column">0</property>
                                 </layout>
                               </object>
@@ -6324,8 +6464,8 @@ battery is charged.</property>
                 </child>
                 <child>
                   <object class="GtkEventControllerMotion">
-                    <signal name="leave" handler="preview_leave_cb" swapped="no"/>
-                    <signal name="motion" handler="preview_motion_cb" swapped="no"/>
+                    <signal name="leave" handler="preview_leave_cb" object="preview_hud" swapped="no"/>
+                    <signal name="motion" handler="preview_motion_cb" object="preview_hud" swapped="no"/>
                   </object>
                 </child>
               </object>
@@ -6334,6 +6474,7 @@ battery is charged.</property>
         </property>
         <child type="overlay">
           <object class="GtkBox" id="preview_hud">
+            <property name="visible">False</property>
             <property name="can-focus">False</property>
             <property name="halign">center</property>
             <property name="valign">end</property>
